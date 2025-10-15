@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true
+  },
+  "tasks": {
+    "run": "deno run --allow-net --allow-write src/main.ts",
+    "lint": "deno lint",
+    "fmt": "deno fmt"
+  },
+  "imports": {
+    "cheerio": "npm:cheerio@^1.1.2",
+    "@std/async": "jsr:@std/async@^1"
+  }
+}
