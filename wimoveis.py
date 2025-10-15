@@ -1,6 +1,4 @@
 import time
-import json
-import csv
 import re
 from urllib.parse import urljoin, urlparse
 import requests
