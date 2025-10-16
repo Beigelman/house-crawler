@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import type { Property } from "./types.ts";
+import type { Property } from "../types.ts";
 import { generateEmailHTML, generateEmailText } from "./email-template.ts";
 
 type EmailConfig = {
@@ -9,7 +9,8 @@ type EmailConfig = {
 };
 
 function getEmailConfig(): EmailConfig {
-  const toEmails = Deno.env.get("TO_EMAILS")?.split(",").map((email) => email.trim()) || [];
+  const toEmails =
+    Deno.env.get("TO_EMAILS")?.split(",").map((email) => email.trim()) || [];
   return {
     apiKey: Deno.env.get("RESEND_API_KEY"),
     fromEmail: Deno.env.get("FROM_EMAIL") || "onboarding@resend.dev",
@@ -68,7 +69,7 @@ export async function sendNewPropertiesEmail(
     const resend = new Resend(config.apiKey);
 
     // Separa os emails (pode ser uma lista separada por vírgula)
-    const recipients = config.toEmails
+    const recipients = config.toEmails;
 
     // Gera o conteúdo do email
     const htmlContent = generateEmailHTML(properties);

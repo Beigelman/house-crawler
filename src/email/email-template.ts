@@ -1,4 +1,4 @@
-import type { Property } from "./types.ts";
+import type { Property } from "../types.ts";
 
 /**
  * Formata o valor do imóvel para exibição

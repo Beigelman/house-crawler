@@ -1,14 +1,14 @@
 import { delay } from "@std/async/delay";
 import type { CheerioAPI } from "cheerio";
 
-import { Property } from "./types.ts";
+import { Property } from "../types.ts";
 import {
   buildAbsoluteUrl,
   fetchDocument,
   isSameDomain,
   normalizeWhitespace,
   printProperty,
-} from "./utils.ts";
+} from "../utils.ts";
 
 const BASE = "https://www.wimoveis.com.br";
 const LIST_URL =

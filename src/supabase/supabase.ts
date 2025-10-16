@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Property } from "./types.ts";
+import { Property } from "../types.ts";
 import { Database } from "./database.types.ts";
 
 let supabaseClient: SupabaseClient<Database>;

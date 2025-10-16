@@ -1,6 +1,8 @@
 # House Crawler 🏠
 
-> Sistema automatizado de monitoramento de imóveis que realiza web scraping em múltiplos portais imobiliários, detecta novos anúncios e envia notificações por email.
+> Sistema automatizado de monitoramento de imóveis que realiza web scraping em
+> múltiplos portais imobiliários, detecta novos anúncios e envia notificações
+> por email.
 
 [![Deno](https://img.shields.io/badge/Deno-1.40+-000000?style=flat&logo=deno)](https://deno.land/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -54,11 +56,17 @@ Para configuração detalhada, veja a [seção de configuração](#️-configura
 
 ## 📖 Sobre o Projeto
 
-O **House Crawler** é uma ferramenta desenvolvida em TypeScript com Deno que automatiza a busca por imóveis em sites de classificados. Ele foi projetado para coletar informações de apartamentos/casas que atendem a critérios específicos (localização, número de quartos, valor, etc.) e notificar o usuário quando novos anúncios são publicados.
+O **House Crawler** é uma ferramenta desenvolvida em TypeScript com Deno que
+automatiza a busca por imóveis em sites de classificados. Ele foi projetado para
+coletar informações de apartamentos/casas que atendem a critérios específicos
+(localização, número de quartos, valor, etc.) e notificar o usuário quando novos
+anúncios são publicados.
 
 ### Caso de Uso
 
-Ideal para quem está procurando imóvel e quer ser notificado automaticamente quando novos anúncios aparecem nos portais, sem precisar verificar manualmente todos os dias.
+Ideal para quem está procurando imóvel e quer ser notificado automaticamente
+quando novos anúncios aparecem nos portais, sem precisar verificar manualmente
+todos os dias.
 
 ### Como Funciona em Resumo
 
@@ -83,9 +91,12 @@ Ideal para quem está procurando imóvel e quer ser notificado automaticamente q
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **[Deno](https://deno.land/)** - Runtime TypeScript/JavaScript moderno e seguro
-- **[TypeScript](https://www.typescriptlang.org/)** - Linguagem com tipagem estática
-- **[Cheerio](https://cheerio.js.org/)** - Biblioteca para parsing e manipulação de HTML (jQuery-like)
+- **[Deno](https://deno.land/)** - Runtime TypeScript/JavaScript moderno e
+  seguro
+- **[TypeScript](https://www.typescriptlang.org/)** - Linguagem com tipagem
+  estática
+- **[Cheerio](https://cheerio.js.org/)** - Biblioteca para parsing e manipulação
+  de HTML (jQuery-like)
 - **[Supabase](https://supabase.com/)** - Backend-as-a-Service com PostgreSQL
 - **[Resend](https://resend.com/)** - API moderna para envio de emails
 
@@ -258,7 +269,9 @@ house-crawler/
 ### Descrição dos Módulos
 
 #### 📌 `main.ts` - Orquestrador Principal
+
 Ponto de entrada do sistema. Coordena a execução de todas as etapas:
+
 - Carrega configurações do `.env`
 - Chama os crawlers sequencialmente
 - Agrega os resultados
@@ -266,12 +279,16 @@ Ponto de entrada do sistema. Coordena a execução de todas as etapas:
 - Envia notificações por email
 
 #### 🕷️ `df_imoveis.ts` e `wimoveis.ts` - Crawlers
+
 Cada crawler segue o mesmo padrão:
-1. **`collectListingLinks()`**: Extrai todos os links de imóveis da página de listagem
+
+1. **`collectListingLinks()`**: Extrai todos os links de imóveis da página de
+   listagem
 2. **`parseProperty()`**: Acessa cada link e extrai os dados do imóvel
 3. **`extract**()`**: Funções específicas para extrair título, preço, etc.
 
 **Estratégias de Parsing:**
+
 - Usam Cheerio para navegação no DOM HTML
 - Seletores CSS customizados para cada site
 - Normalização de texto (remoção de espaços extras)
@@ -279,16 +296,19 @@ Cada crawler segue o mesmo padrão:
 - Validação de domínio
 
 #### 💾 `supabase.ts` - Gerenciamento de Dados
-- **`getSupabaseClient()`**: Cria e retorna instância do cliente Supabase (singleton)
+
+- **`getSupabaseClient()`**: Cria e retorna instância do cliente Supabase
+  (singleton)
 - **`insertNewProperties()`**: Lógica de inserção inteligente
   - Consulta links existentes no banco
   - Filtra apenas novos imóveis
   - Insere em batch
 
-**Estratégia de Deduplicação:**
-O campo `link` é a chave primária, garantindo que o mesmo imóvel não seja inserido duas vezes.
+**Estratégia de Deduplicação:** O campo `link` é a chave primária, garantindo
+que o mesmo imóvel não seja inserido duas vezes.
 
 #### 📧 `email.ts` - Sistema de Notificações
+
 - Validação de configuração (API key, emails)
 - Geração de conteúdo HTML e texto
 - Envio via Resend API
@@ -296,11 +316,13 @@ O campo `link` é a chave primária, garantindo que o mesmo imóvel não seja in
 - Tratamento de erros robusto
 
 #### 🎨 `email-template.ts` - Templates de Email
+
 - **`generateEmailHTML()`**: Template HTML responsivo
 - **`generateEmailText()`**: Versão texto simples
 - Formatação de valores, links e informações
 
 #### 🛠️ `utils.ts` - Utilitários
+
 - **`fetchDocument()`**: Busca e faz parsing de páginas HTML
 - **`normalizeWhitespace()`**: Remove espaços extras e quebras de linha
 - **`buildAbsoluteUrl()`**: Constrói URLs absolutas a partir de relativas
@@ -308,20 +330,25 @@ O campo `link` é a chave primária, garantindo que o mesmo imóvel não seja in
 - **`printProperty()`**: Exibe imóvel no console formatado
 
 #### 🤖 `robots.ts` - Verificação de robots.txt
+
 Módulo opcional para web scraping ético:
+
 - **`fetchRobotsTxt()`**: Baixa o robots.txt de um site
 - **`parseRobotsTxt()`**: Faz parsing do conteúdo
 - **`isUrlAllowed()`**: Verifica se URL é permitida
 - **`checkUrlAgainstRobotsTxt()`**: Função auxiliar completa
 
-**Nota:** Este módulo é educacional. O erro 403 que você recebe vem de um firewall/WAF, não do robots.txt. As URLs atuais do crawler **respeitam** o robots.txt de ambos os sites.
+**Nota:** Este módulo é educacional. O erro 403 que você recebe vem de um
+firewall/WAF, não do robots.txt. As URLs atuais do crawler **respeitam** o
+robots.txt de ambos os sites.
 
 #### 📐 `types.ts` - Tipos
+
 ```typescript
 interface Property {
-  titulo: string;  // Título/descrição do imóvel
-  valor: string;   // Valor (formato texto)
-  link: string;    // URL do anúncio (chave primária)
+  titulo: string; // Título/descrição do imóvel
+  valor: string; // Valor (formato texto)
+  link: string; // URL do anúncio (chave primária)
 }
 ```
 
@@ -363,18 +390,21 @@ deno task lint
 Os critérios de busca estão definidos nas URLs de listagem de cada crawler:
 
 **DF Imóveis** (`src/df_imoveis.ts`):
+
 ```typescript
 const LIST_URL =
   "https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=90";
 ```
 
 **Wimoveis** (`src/wimoveis.ts`):
+
 ```typescript
 const LIST_URL =
   "https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=90,&loc=Z:42705,42704&price=,1200000";
 ```
 
-Você pode ajustar os parâmetros diretamente na URL ou usar o site para fazer uma busca e copiar a URL resultante.
+Você pode ajustar os parâmetros diretamente na URL ou usar o site para fazer uma
+busca e copiar a URL resultante.
 
 ### Adicionar Novos Sites
 
@@ -383,9 +413,9 @@ Para adicionar um novo site de imóveis:
 1. Crie um novo arquivo (ex: `src/novo_site.ts`)
 2. Implemente as funções:
    ```typescript
-   async function collectListingLinks(listUrl: string): Promise<string[]>
-   async function parseProperty(url: string): Promise<Property>
-   export async function collectNovoSiteProperties(): Promise<Property[]>
+   async function collectListingLinks(listUrl: string): Promise<string[]>;
+   async function parseProperty(url: string): Promise<Property>;
+   export async function collectNovoSiteProperties(): Promise<Property[]>;
    ```
 3. Use os seletores CSS apropriados para extrair os dados
 4. Adicione no `main.ts`:
@@ -418,7 +448,8 @@ crontab -e
 
 ### GitHub Actions
 
-⚠️ **Limitação**: Alguns sites podem bloquear requisições do GitHub Actions (erro 403). O crawler continuará funcionando com os sites que não bloquearem.
+⚠️ **Limitação**: Alguns sites podem bloquear requisições do GitHub Actions
+(erro 403). O crawler continuará funcionando com os sites que não bloquearem.
 
 Crie `.github/workflows/crawler.yml`:
 
@@ -426,7 +457,7 @@ Crie `.github/workflows/crawler.yml`:
 name: House Crawler
 on:
   schedule:
-    - cron: '0 9,18 * * *'  # 9h e 18h UTC
+    - cron: "0 9,18 * * *" # 9h e 18h UTC
   workflow_dispatch:
 
 jobs:
@@ -448,12 +479,14 @@ jobs:
 ```
 
 **Configurar Secrets no GitHub:**
+
 1. Vá em Settings > Secrets and variables > Actions
 2. Adicione cada variável de ambiente como um secret
 
 ## 📝 Notas Importantes
 
 ### Funcionamento
+
 - A chave primária é o `link`, garantindo que não haja duplicatas
 - Imóveis já cadastrados são automaticamente ignorados
 - O campo `created_at` registra quando o imóvel foi visto pela primeira vez
@@ -461,30 +494,37 @@ jobs:
 - O template de email é responsivo e funciona em todos os clientes de email
 
 ### Tratamento de Erros
-- Se houver erro ao coletar um imóvel específico, ele é registrado no console e o crawler continua
+
+- Se houver erro ao coletar um imóvel específico, ele é registrado no console e
+  o crawler continua
 - Se houver erro ao sincronizar com Supabase, o processo é interrompido
 - Se houver erro ao enviar email, o processo é interrompido
 
 ### Performance
+
 - Delay de 1.2s entre requisições evita bloqueios por rate limiting
 - Inserção em batch no Supabase (mais eficiente)
 - Consulta prévia de links existentes minimiza operações desnecessárias
 
 ### Web Scraping Ético
+
 - ✅ Respeita robots.txt dos sites
 - ✅ Implementa delays entre requisições (1.2s)
 - ✅ Usa User-Agent identificável (navegador real)
 - ✅ Não sobrecarrega os servidores
 - ✅ Acessa apenas páginas públicas de listagem
-- ⚠️ Sites podem alterar sua estrutura HTML - nesse caso, os seletores CSS precisarão ser atualizados
+- ⚠️ Sites podem alterar sua estrutura HTML - nesse caso, os seletores CSS
+  precisarão ser atualizados
 
 **Verificação do robots.txt:**
+
 ```bash
 # Verificar se suas URLs respeitam o robots.txt
 deno task test-robots
 ```
 
 **Status atual:**
+
 - ✅ DF Imóveis: Nossas URLs são permitidas
 - ✅ Wimoveis: Nossas URLs são permitidas
 - ⚠️ O erro 403 vem de firewall/WAF, não do robots.txt
@@ -493,7 +533,9 @@ deno task test-robots
 
 ### O Que É?
 
-O `robots.txt` é um arquivo na raiz de sites (`https://exemplo.com/robots.txt`) que indica quais partes do site podem ser acessadas por bots/crawlers. É um "acordo de cavalheiros" da web.
+O `robots.txt` é um arquivo na raiz de sites (`https://exemplo.com/robots.txt`)
+que indica quais partes do site podem ser acessadas por bots/crawlers. É um
+"acordo de cavalheiros" da web.
 
 ### Como Funciona?
 
@@ -507,6 +549,7 @@ Allow: /api/public/     # Permite /api/public/ (exceção)
 ### Status dos Sites Monitorados
 
 **DF Imóveis:**
+
 ```
 ✅ Permitido: /venda/... (páginas públicas de listagem)
 ✅ Permitido: /imovel/... (páginas de detalhes)
@@ -514,6 +557,7 @@ Allow: /api/public/     # Permite /api/public/ (exceção)
 ```
 
 **Wimoveis:**
+
 ```
 ✅ Permitido: Páginas de listagem com filtros
 ❌ Bloqueado: ?sort=*, ?page=>5, tracking, APIs internas
@@ -521,9 +565,11 @@ Allow: /api/public/     # Permite /api/public/ (exceção)
 
 ### Nosso Crawler Respeita?
 
-**Sim!** ✅ Todas as URLs que acessamos são permitidas pelos respectivos `robots.txt`.
+**Sim!** ✅ Todas as URLs que acessamos são permitidas pelos respectivos
+`robots.txt`.
 
 Você pode verificar com:
+
 ```bash
 deno task test-robots
 ```
@@ -531,6 +577,7 @@ deno task test-robots
 ### Então Por Que o Erro 403?
 
 O `robots.txt` é **opcional** e **informativo**. Sites podem:
+
 - Ter robots.txt E proteção adicional (firewall/WAF)
 - Bloquear IPs de data centers (como GitHub Actions)
 - Usar proteção anti-bot (Cloudflare, etc.)
@@ -565,23 +612,29 @@ O `robots.txt` é **opcional** e **informativo**. Sites podem:
 
 ### Erro: "Variáveis de ambiente não encontradas"
 
-**Solução**: Verifique se o arquivo `.env` existe na raiz do projeto e contém todas as variáveis necessárias.
+**Solução**: Verifique se o arquivo `.env` existe na raiz do projeto e contém
+todas as variáveis necessárias.
 
 ### ⚠️ Erro 403 Forbidden no GitHub Actions
 
-**Problema**: O crawler funciona localmente mas falha no GitHub Actions com erro `403 Forbidden`.
+**Problema**: O crawler funciona localmente mas falha no GitHub Actions com erro
+`403 Forbidden`.
 
-**Causa**: Sites imobiliários bloqueiam requisições vindas de IPs de data centers (como os do GitHub Actions) para se proteger de bots.
+**Causa**: Sites imobiliários bloqueiam requisições vindas de IPs de data
+centers (como os do GitHub Actions) para se proteger de bots.
 
 **Soluções:**
 
 #### 1️⃣ Solução Recomendada: Aceitar a Limitação
+
 O código já está preparado para lidar com isso:
+
 - Se um site retornar 403, ele será pulado
 - O crawler continuará com os outros sites
 - Você receberá email apenas dos sites que funcionaram
 
 #### 2️⃣ Alternativa: Rodar Localmente com Cron
+
 Execute o crawler em sua própria máquina ao invés do GitHub Actions:
 
 ```bash
@@ -593,25 +646,31 @@ crontab -e
 ```
 
 #### 3️⃣ Alternativa: Usar VPS/Servidor Próprio
+
 Deploy em um servidor VPS (DigitalOcean, AWS, etc.):
+
 - IPs residenciais têm menos chance de bloqueio
 - Mais controle sobre o ambiente
 - Pode usar proxies se necessário
 
 #### 4️⃣ Alternativa Avançada: Usar Proxy (Pago)
+
 Adicione suporte a proxies residenciais nos crawlers:
+
 ```typescript
 const PROXY_URL = Deno.env.get("PROXY_URL");
 // Configurar proxy nas requisições
 ```
 
-**Nota**: Web scraping deve respeitar os termos de uso dos sites. O erro 403 é a forma do site indicar que não quer ser acessado automaticamente.
+**Nota**: Web scraping deve respeitar os termos de uso dos sites. O erro 403 é a
+forma do site indicar que não quer ser acessado automaticamente.
 
 ### Erro ao coletar imóveis (HTTP 404)
 
 **Causa**: A URL de listagem mudou ou não existe mais.
 
-**Solução**: 
+**Solução**:
+
 1. Verifique se a URL de listagem ainda está válida
 2. Acesse o site manualmente e copie a nova URL
 3. Atualize a constante `LIST_URL` no crawler correspondente
@@ -619,6 +678,7 @@ const PROXY_URL = Deno.env.get("PROXY_URL");
 ### Emails não estão sendo enviados
 
 **Verificações**:
+
 1. Execute `deno task test-email` para testar a configuração
 2. Verifique se `RESEND_API_KEY` está correta
 3. Confirme que `TO_EMAILS` está no formato correto
@@ -628,16 +688,19 @@ const PROXY_URL = Deno.env.get("PROXY_URL");
 
 **Causa**: Improável, pois o `link` é chave primária.
 
-**Solução**: Verifique se a função `insertNewProperties` está sendo chamada corretamente.
+**Solução**: Verifique se a função `insertNewProperties` está sendo chamada
+corretamente.
 
 ### Performance lenta
 
 **Possíveis causas**:
+
 - Muitos imóveis na listagem
 - Latência de rede alta
 - Rate limiting dos sites
 
 **Soluções**:
+
 - Aumente o delay entre requisições
 - Filtre melhor os critérios de busca
 - Execute em horários de menor tráfego
@@ -655,7 +718,8 @@ Contribuições são bem-vindas! Sinta-se à vontade para:
 ### Como Contribuir
 
 1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+2. Crie uma branch para sua feature
+   (`git checkout -b feature/nova-funcionalidade`)
 3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
 4. Push para a branch (`git push origin feature/nova-funcionalidade`)
 5. Abra um Pull Request
@@ -691,4 +755,4 @@ Se você encontrou algum problema ou tem sugestões:
 
 **Desenvolvido com ❤️ usando Deno e TypeScript**
 
-*Última atualização: Outubro 2025*
+_Última atualização: Outubro 2025_

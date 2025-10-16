@@ -1,6 +1,6 @@
 /**
  * Módulo para verificação de robots.txt
- * 
+ *
  * NOTA: Este módulo é OPCIONAL e educacional.
  * O erro 403 que você está recebendo é de um firewall/WAF,
  * não relacionado ao robots.txt.
@@ -191,4 +191,3 @@ export async function checkUrlAgainstRobotsTxt(
 //   const result = await checkUrlAgainstRobotsTxt(testUrl);
 //   console.log(result);
 // }
-

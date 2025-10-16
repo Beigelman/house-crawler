@@ -1,14 +1,14 @@
 import { load } from "@std/dotenv";
-import { collectDfImoveisProperties } from "./df_imoveis.ts";
-import { collectWimoveisProperties } from "./wimoveis.ts";
-import { insertNewProperties } from "./supabase.ts";
-import { sendNewPropertiesEmail } from "./email.ts";
+import { collectDfImoveisProperties } from "./providers/df_imoveis.ts";
+import { collectWimoveisProperties } from "./providers/wimoveis.ts";
+import { insertNewProperties } from "./supabase/supabase.ts";
+import { sendNewPropertiesEmail } from "./email/email.ts";
 import { Property } from "./types.ts";
 
 // Carrega variáveis de ambiente do arquivo .env
 await load({ export: true });
 
-async function main(): Promise<void> {
+async function searchProperties(): Promise<void> {
   console.log("🏠 Iniciando coleta de imóveis...\n");
 
   console.log("📍 Coletando imóveis do DF Imóveis...");
@@ -57,5 +57,5 @@ async function main(): Promise<void> {
 }
 
 if (import.meta.main) {
-  await main();
+  await searchProperties();
 }

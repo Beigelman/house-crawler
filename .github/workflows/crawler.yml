@@ -1,7 +1,7 @@
 name: House Crawler
 on:
   schedule:
-    - cron: '0 9,18 * * *'  # 9h e 18h UTC
+    - cron: "0 9,18 * * *" # 9h e 18h UTC
   workflow_dispatch:
 
 jobs:
