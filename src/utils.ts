@@ -1,4 +1,4 @@
-import { load, type CheerioAPI } from "cheerio";
+import { type CheerioAPI, load } from "cheerio";
 import { Property } from "./types.ts";
 
 export async function fetchDocument(
@@ -7,7 +7,9 @@ export async function fetchDocument(
 ): Promise<CheerioAPI> {
   const response = await fetch(url, { headers });
   if (!response.ok) {
-    throw new Error(`Falha ao acessar ${url}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Falha ao acessar ${url}: ${response.status} ${response.statusText}`,
+    );
   }
 
   const html = await response.text();
@@ -15,7 +17,9 @@ export async function fetchDocument(
 }
 
 export function printProperty(property: Property): void {
-  console.log(`Titulo: ${property.titulo}\nValor: ${property.valor}\nLink: ${property.link}\n`);
+  console.log(
+    `Titulo: ${property.titulo}\nValor: ${property.valor}\nLink: ${property.link}\n`,
+  );
 }
 
 export function normalizeWhitespace(value: string | undefined | null): string {

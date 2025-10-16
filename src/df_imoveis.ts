@@ -12,7 +12,7 @@ import {
 
 const BASE = "https://www.dfimoveis.com.br";
 const LIST_URL =
-  "https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=95";
+  "https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=90";
 
 const HEADERS = {
   "User-Agent":

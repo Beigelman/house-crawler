@@ -12,7 +12,7 @@ import {
 
 const BASE = "https://www.wimoveis.com.br";
 const LIST_URL =
-  "https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=95,&loc=Z:42705,42704&price=,1200000";
+  "https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=90,&loc=Z:42705,42704&price=,1200000";
 
 const HEADERS = {
   "User-Agent":
