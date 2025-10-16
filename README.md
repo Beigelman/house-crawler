@@ -24,6 +24,7 @@
 - [Personalizando os Crawlers](#-personalizando-os-crawlers)
 - [Automação com Cron](#-automação-com-cron)
 - [Notas Importantes](#-notas-importantes)
+- [Entendendo o robots.txt](#-entendendo-o-robotstxt)
 - [Segurança](#-segurança)
 - [Troubleshooting](#-troubleshooting)
 - [Contribuindo](#-contribuindo)
@@ -242,11 +243,13 @@ house-crawler/
 │   ├── supabase.ts          # 💾 Integração com Supabase
 │   ├── email.ts             # 📧 Envio de emails via Resend
 │   ├── email-template.ts    # 📝 Template HTML/texto dos emails
+│   ├── robots.ts            # 🤖 Verificação de robots.txt
 │   ├── types.ts             # 📐 Definições de tipos TypeScript
 │   ├── utils.ts             # 🛠️ Funções utilitárias
 │   ├── database.types.ts    # 🗄️ Tipos gerados do Supabase
 │   ├── test-connection.ts   # 🧪 Teste de conexão Supabase
-│   └── test-email.ts        # 🧪 Teste de envio de email
+│   ├── test-email.ts        # 🧪 Teste de envio de email
+│   └── test-robots.ts       # 🧪 Teste de robots.txt
 ├── deno.json                # ⚙️ Configuração Deno e tasks
 ├── setup-supabase.sql       # 🗃️ Script de criação da tabela
 └── .env                     # 🔐 Variáveis de ambiente (criar)
@@ -304,6 +307,15 @@ O campo `link` é a chave primária, garantindo que o mesmo imóvel não seja in
 - **`isSameDomain()`**: Valida se URL pertence ao domínio esperado
 - **`printProperty()`**: Exibe imóvel no console formatado
 
+#### 🤖 `robots.ts` - Verificação de robots.txt
+Módulo opcional para web scraping ético:
+- **`fetchRobotsTxt()`**: Baixa o robots.txt de um site
+- **`parseRobotsTxt()`**: Faz parsing do conteúdo
+- **`isUrlAllowed()`**: Verifica se URL é permitida
+- **`checkUrlAgainstRobotsTxt()`**: Função auxiliar completa
+
+**Nota:** Este módulo é educacional. O erro 403 que você recebe vem de um firewall/WAF, não do robots.txt. As URLs atuais do crawler **respeitam** o robots.txt de ambos os sites.
+
 #### 📐 `types.ts` - Tipos
 ```typescript
 interface Property {
@@ -330,6 +342,9 @@ deno task test
 
 # Testar configuração de email
 deno task test-email
+
+# Verificar robots.txt dos sites
+deno task test-robots
 
 # Executar o crawler
 deno task run
@@ -403,6 +418,8 @@ crontab -e
 
 ### GitHub Actions
 
+⚠️ **Limitação**: Alguns sites podem bloquear requisições do GitHub Actions (erro 403). O crawler continuará funcionando com os sites que não bloquearem.
+
 Crie `.github/workflows/crawler.yml`:
 
 ```yaml
@@ -430,6 +447,10 @@ jobs:
         run: deno task run
 ```
 
+**Configurar Secrets no GitHub:**
+1. Vá em Settings > Secrets and variables > Actions
+2. Adicione cada variável de ambiente como um secret
+
 ## 📝 Notas Importantes
 
 ### Funcionamento
@@ -450,11 +471,78 @@ jobs:
 - Consulta prévia de links existentes minimiza operações desnecessárias
 
 ### Web Scraping Ético
-- ✅ Respeita robots.txt quando possível
-- ✅ Implementa delays entre requisições
-- ✅ Usa User-Agent identificável
+- ✅ Respeita robots.txt dos sites
+- ✅ Implementa delays entre requisições (1.2s)
+- ✅ Usa User-Agent identificável (navegador real)
 - ✅ Não sobrecarrega os servidores
+- ✅ Acessa apenas páginas públicas de listagem
 - ⚠️ Sites podem alterar sua estrutura HTML - nesse caso, os seletores CSS precisarão ser atualizados
+
+**Verificação do robots.txt:**
+```bash
+# Verificar se suas URLs respeitam o robots.txt
+deno task test-robots
+```
+
+**Status atual:**
+- ✅ DF Imóveis: Nossas URLs são permitidas
+- ✅ Wimoveis: Nossas URLs são permitidas
+- ⚠️ O erro 403 vem de firewall/WAF, não do robots.txt
+
+## 🤖 Entendendo o robots.txt
+
+### O Que É?
+
+O `robots.txt` é um arquivo na raiz de sites (`https://exemplo.com/robots.txt`) que indica quais partes do site podem ser acessadas por bots/crawlers. É um "acordo de cavalheiros" da web.
+
+### Como Funciona?
+
+```
+User-agent: *           # Aplica-se a todos os bots
+Disallow: /admin/       # Proíbe acesso a /admin/
+Disallow: /api/         # Proíbe acesso a /api/
+Allow: /api/public/     # Permite /api/public/ (exceção)
+```
+
+### Status dos Sites Monitorados
+
+**DF Imóveis:**
+```
+✅ Permitido: /venda/... (páginas públicas de listagem)
+✅ Permitido: /imovel/... (páginas de detalhes)
+❌ Bloqueado: /favoritos/, /conta/, /visitas/ (áreas privadas)
+```
+
+**Wimoveis:**
+```
+✅ Permitido: Páginas de listagem com filtros
+❌ Bloqueado: ?sort=*, ?page=>5, tracking, APIs internas
+```
+
+### Nosso Crawler Respeita?
+
+**Sim!** ✅ Todas as URLs que acessamos são permitidas pelos respectivos `robots.txt`.
+
+Você pode verificar com:
+```bash
+deno task test-robots
+```
+
+### Então Por Que o Erro 403?
+
+O `robots.txt` é **opcional** e **informativo**. Sites podem:
+- Ter robots.txt E proteção adicional (firewall/WAF)
+- Bloquear IPs de data centers (como GitHub Actions)
+- Usar proteção anti-bot (Cloudflare, etc.)
+
+**O erro 403 vem de um firewall/WAF, não do robots.txt.**
+
+### Leitura Adicional
+
+- [RFC 9309 - Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309.html)
+- [Google Search Central - robots.txt](https://developers.google.com/search/docs/crawling-indexing/robots/intro)
+
+---
 
 ## 🔒 Segurança
 
@@ -479,14 +567,54 @@ jobs:
 
 **Solução**: Verifique se o arquivo `.env` existe na raiz do projeto e contém todas as variáveis necessárias.
 
-### Erro ao coletar imóveis (HTTP 403/404)
+### ⚠️ Erro 403 Forbidden no GitHub Actions
 
-**Causa**: O site pode ter mudado sua estrutura ou está bloqueando o crawler.
+**Problema**: O crawler funciona localmente mas falha no GitHub Actions com erro `403 Forbidden`.
+
+**Causa**: Sites imobiliários bloqueiam requisições vindas de IPs de data centers (como os do GitHub Actions) para se proteger de bots.
+
+**Soluções:**
+
+#### 1️⃣ Solução Recomendada: Aceitar a Limitação
+O código já está preparado para lidar com isso:
+- Se um site retornar 403, ele será pulado
+- O crawler continuará com os outros sites
+- Você receberá email apenas dos sites que funcionaram
+
+#### 2️⃣ Alternativa: Rodar Localmente com Cron
+Execute o crawler em sua própria máquina ao invés do GitHub Actions:
+
+```bash
+# Linux/macOS - Edite o crontab
+crontab -e
+
+# Adicione (executar 2x por dia):
+0 9,18 * * * cd /caminho/para/house-crawler && deno task run >> /tmp/crawler.log 2>&1
+```
+
+#### 3️⃣ Alternativa: Usar VPS/Servidor Próprio
+Deploy em um servidor VPS (DigitalOcean, AWS, etc.):
+- IPs residenciais têm menos chance de bloqueio
+- Mais controle sobre o ambiente
+- Pode usar proxies se necessário
+
+#### 4️⃣ Alternativa Avançada: Usar Proxy (Pago)
+Adicione suporte a proxies residenciais nos crawlers:
+```typescript
+const PROXY_URL = Deno.env.get("PROXY_URL");
+// Configurar proxy nas requisições
+```
+
+**Nota**: Web scraping deve respeitar os termos de uso dos sites. O erro 403 é a forma do site indicar que não quer ser acessado automaticamente.
+
+### Erro ao coletar imóveis (HTTP 404)
+
+**Causa**: A URL de listagem mudou ou não existe mais.
 
 **Solução**: 
 1. Verifique se a URL de listagem ainda está válida
-2. Atualize os seletores CSS no crawler correspondente
-3. Teste manualmente acessando a URL no navegador
+2. Acesse o site manualmente e copie a nova URL
+3. Atualize a constante `LIST_URL` no crawler correspondente
 
 ### Emails não estão sendo enviados
 

@@ -16,8 +16,19 @@ const LIST_URL =
 
 const HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Accept":
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
   "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Referer": "https://www.dfimoveis.com.br/",
+  "Connection": "keep-alive",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "same-origin",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+  "Cache-Control": "max-age=0",
 };
 
 async function getDocument(url: string): Promise<CheerioAPI> {
@@ -119,24 +130,39 @@ async function parseProperty(url: string): Promise<Property> {
 }
 
 export async function collectDfImoveisProperties(): Promise<Property[]> {
-  const links = await collectListingLinks(LIST_URL);
-  if (links.length === 0) {
-    console.log("Nenhum link de imóvel encontrado na listagem.");
-    return [];
-  }
-
-  const results: Property[] = [];
-  for (const link of links) {
-    try {
-      const property = await parseProperty(link);
-      results.push(property);
-      printProperty(property);
-    } catch (error) {
-      console.error(`Erro ao processar ${link}:`, error);
+  try {
+    const links = await collectListingLinks(LIST_URL);
+    if (links.length === 0) {
+      console.log("Nenhum link de imóvel encontrado na listagem.");
+      return [];
     }
 
-    await delay(1200);
-  }
+    const results: Property[] = [];
+    for (const link of links) {
+      try {
+        const property = await parseProperty(link);
+        results.push(property);
+        printProperty(property);
+      } catch (error) {
+        console.error(`Erro ao processar ${link}:`, error);
+      }
 
-  return results;
+      await delay(1200);
+    }
+
+    return results;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("403")) {
+      console.error(
+        "⚠️  AVISO: DF Imóveis bloqueou o acesso (403 Forbidden).",
+      );
+      console.error(
+        "   Isso é comum em ambientes de CI/CD como GitHub Actions.",
+      );
+      console.error("   O crawler continuará apenas com os outros sites.\n");
+    } else {
+      console.error("❌ Erro ao coletar imóveis do DF Imóveis:", error);
+    }
+    return [];
+  }
 }

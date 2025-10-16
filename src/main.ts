@@ -22,6 +22,15 @@ async function main(): Promise<void> {
   const allProperties = [...dfProperties, ...wimoveisProperties];
   console.log(`📊 Total de imóveis coletados: ${allProperties.length}\n`);
 
+  if (allProperties.length === 0) {
+    console.log("⚠️  Nenhum imóvel foi coletado. Encerrando...\n");
+    console.log("   Possíveis causas:");
+    console.log("   • Sites bloquearam o acesso (403 Forbidden)");
+    console.log("   • Estrutura HTML dos sites mudou");
+    console.log("   • Problemas de rede\n");
+    Deno.exit(0);
+  }
+
   let newProperties: Property[] = [];
   console.log("☁️  Sincronizando com Supabase...\n");
   try {
@@ -33,7 +42,6 @@ async function main(): Promise<void> {
     Deno.exit(1);
   }
 
-
   if (newProperties.length > 0) {
     console.log("📧 Enviando notificação por email...\n");
     const result = await sendNewPropertiesEmail(newProperties);
@@ -43,6 +51,8 @@ async function main(): Promise<void> {
       console.error("\n❌ Erro ao enviar email:", result.error);
       Deno.exit(1);
     }
+  } else {
+    console.log("ℹ️  Nenhum imóvel novo encontrado. Email não será enviado.\n");
   }
 }
 
