@@ -1,24 +1,106 @@
 # House Crawler 🏠
 
-Crawler de imóveis que coleta anúncios de múltiplas fontes e armazena no
-Supabase.
+> Sistema automatizado de monitoramento de imóveis que realiza web scraping em múltiplos portais imobiliários, detecta novos anúncios e envia notificações por email.
+
+[![Deno](https://img.shields.io/badge/Deno-1.40+-000000?style=flat&logo=deno)](https://deno.land/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Resend](https://img.shields.io/badge/Resend-Email-000000?style=flat)](https://resend.com/)
+
+---
+
+## 📑 Índice
+
+- [Sobre o Projeto](#-sobre-o-projeto)
+- [Funcionalidades](#-funcionalidades)
+- [Tecnologias Utilizadas](#️-tecnologias-utilizadas)
+- [Pré-requisitos](#-pré-requisitos)
+- [Configuração](#️-configuração)
+- [Uso](#-uso)
+- [Arquitetura do Sistema](#️-arquitetura-do-sistema)
+- [Estrutura de Arquivos](#️-estrutura-de-arquivos)
+- [Estrutura da Tabela](#-estrutura-da-tabela-real_states)
+- [Comandos Úteis](#-comandos-úteis)
+- [Personalizando os Crawlers](#-personalizando-os-crawlers)
+- [Automação com Cron](#-automação-com-cron)
+- [Notas Importantes](#-notas-importantes)
+- [Segurança](#-segurança)
+- [Troubleshooting](#-troubleshooting)
+- [Contribuindo](#-contribuindo)
+- [Roadmap Futuro](#-roadmap-futuro)
+- [Licença](#-licença)
+
+---
+
+## ⚡ Quick Start
+
+```bash
+# 1. Clone o repositório
+git clone <seu-repo>
+cd house-crawler
+
+# 2. Configure as variáveis de ambiente
+cp .env.example .env
+# Edite o .env com suas credenciais
+
+# 3. Execute o crawler
+deno task run
+```
+
+Para configuração detalhada, veja a [seção de configuração](#️-configuração).
+
+---
+
+## 📖 Sobre o Projeto
+
+O **House Crawler** é uma ferramenta desenvolvida em TypeScript com Deno que automatiza a busca por imóveis em sites de classificados. Ele foi projetado para coletar informações de apartamentos/casas que atendem a critérios específicos (localização, número de quartos, valor, etc.) e notificar o usuário quando novos anúncios são publicados.
+
+### Caso de Uso
+
+Ideal para quem está procurando imóvel e quer ser notificado automaticamente quando novos anúncios aparecem nos portais, sem precisar verificar manualmente todos os dias.
+
+### Como Funciona em Resumo
+
+```
+1. Crawlers acessam DF Imóveis e Wimoveis
+2. Extraem dados dos imóveis (título, valor, link)
+3. Sincronizam com Supabase (só novos são inseridos)
+4. Enviam email via Resend se houver novos imóveis
+```
 
 ## 🚀 Funcionalidades
 
-- Coleta automática de imóveis de diferentes sites:
-  - DF Imóveis
-  - Wimoveis
-- Armazenamento em banco de dados Supabase
-- Detecção automática de duplicatas (baseada no link)
-- Backup local em JSON
-- Inserção apenas de novos imóveis
-- 📧 **Notificação por email com novos imóveis encontrados** (usando Resend)
+- ✅ Coleta automática de imóveis de diferentes sites:
+  - **DF Imóveis** (configurado para Asa Norte/Sul)
+  - **Wimoveis** (configurado para Brasília)
+- 💾 Armazenamento em banco de dados Supabase com detecção de duplicatas
+- 📧 Notificação por email com novos imóveis encontrados (usando Resend)
+- 🔄 Sincronização inteligente: apenas novos imóveis são inseridos
+- 🛡️ Sistema de detecção de duplicatas baseado no link do anúncio
+- ⏱️ Delay entre requisições para evitar bloqueios (rate limiting)
+- 📊 Relatórios detalhados de execução no console
+
+## 🛠️ Tecnologias Utilizadas
+
+- **[Deno](https://deno.land/)** - Runtime TypeScript/JavaScript moderno e seguro
+- **[TypeScript](https://www.typescriptlang.org/)** - Linguagem com tipagem estática
+- **[Cheerio](https://cheerio.js.org/)** - Biblioteca para parsing e manipulação de HTML (jQuery-like)
+- **[Supabase](https://supabase.com/)** - Backend-as-a-Service com PostgreSQL
+- **[Resend](https://resend.com/)** - API moderna para envio de emails
+
+### Por que Deno?
+
+- ✅ TypeScript nativo (sem configuração)
+- ✅ Permissões explícitas (segurança)
+- ✅ Gerenciamento de dependências moderno (sem `node_modules`)
+- ✅ Ferramentas integradas (formatter, linter, test runner)
+- ✅ Suporte nativo a variáveis de ambiente
 
 ## 📋 Pré-requisitos
 
-- [Deno](https://deno.land/) instalado
-- Conta no [Supabase](https://supabase.com/)
-- Conta no [Resend](https://resend.com/) (para notificações por email)
+- [Deno](https://deno.land/) v1.40 ou superior
+- Conta no [Supabase](https://supabase.com/) (gratuita)
+- Conta no [Resend](https://resend.com/) (gratuita para até 100 emails/dia)
 
 ## ⚙️ Configuração
 
@@ -39,16 +121,22 @@ Supabase.
 
 ### 3. Configurar Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto:
+Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
 
 ```bash
-# Supabase
+# Supabase Configuration
 SUPABASE_URL=https://seu-projeto-id.supabase.co
 SUPABASE_ANON_KEY=sua-chave-anon-aqui
 
-# Email (Resend)
+# Email Configuration (Resend)
 RESEND_API_KEY=re_sua_chave_api_aqui
+
+# Email de origem (remetente)
+# Para testes, use: onboarding@resend.dev
+# Para produção, use seu domínio verificado
 FROM_EMAIL=imoveis@seudominio.com
+
+# Emails de destino (destinatários separados por vírgula)
 TO_EMAILS=seu.email@example.com,outro.email@example.com
 ```
 
@@ -98,25 +186,131 @@ deno run --allow-net --allow-write --allow-env src/main.ts
 4. 📧 Envia email de notificação com os novos imóveis (se houver)
 5. 📊 Exibe relatório com número de imóveis novos e status do email
 
-## 🗂️ Estrutura do Projeto
+## 🏗️ Arquitetura do Sistema
+
+### Fluxo de Dados
+
+```mermaid
+graph LR
+    A[main.ts] --> B[df_imoveis.ts]
+    A --> C[wimoveis.ts]
+    B --> D[utils.ts]
+    C --> D
+    B --> E[Cheerio/HTML Parsing]
+    C --> E
+    A --> F[supabase.ts]
+    F --> G[Supabase Cloud]
+    A --> H[email.ts]
+    H --> I[Resend API]
+    H --> J[email-template.ts]
+```
+
+### Processo de Execução
+
+1. **Inicialização** (`main.ts`)
+   - Carrega variáveis de ambiente do arquivo `.env`
+   - Inicia o processo de coleta
+
+2. **Coleta de Dados** (Crawlers)
+   - `df_imoveis.ts`: Acessa a página de listagem do DF Imóveis
+   - `wimoveis.ts`: Acessa a página de listagem do Wimoveis
+   - Para cada site:
+     - Extrai links de todos os imóveis da listagem
+     - Acessa cada link individualmente
+     - Faz parsing do HTML usando Cheerio
+     - Extrai título, valor e link do imóvel
+     - Aguarda 1.2s entre requisições (rate limiting)
+
+3. **Sincronização com Banco de Dados** (`supabase.ts`)
+   - Consulta quais imóveis já existem (baseado no link)
+   - Filtra apenas os novos imóveis
+   - Insere apenas os que ainda não estão no banco
+
+4. **Notificação** (`email.ts`)
+   - Se houver novos imóveis:
+     - Gera email HTML e texto usando template
+     - Envia via Resend para os destinatários configurados
+
+## 🗂️ Estrutura de Arquivos
 
 ```
 house-crawler/
 ├── src/
-│   ├── main.ts              # Arquivo principal
-│   ├── supabase.ts          # Cliente e funções Supabase
-│   ├── email.ts             # Integração com Resend
-│   ├── email-template.ts    # Template HTML do email
-│   ├── types.ts             # Tipos TypeScript
-│   ├── utils.ts             # Utilitários
-│   ├── df_imoveis.ts        # Crawler DF Imóveis
-│   ├── wimoveis.ts          # Crawler Wimoveis
-│   ├── test-connection.ts   # Teste de conexão Supabase
-│   └── test-email.ts        # Teste de email
-├── deno.json                # Configuração Deno
-├── setup-supabase.sql       # Script SQL
-├── imoveis.json             # Backup local (gerado)
-└── .env                     # Variáveis de ambiente (criar)
+│   ├── main.ts              # 🎯 Ponto de entrada e orquestração
+│   ├── df_imoveis.ts        # 🏢 Crawler para DF Imóveis
+│   ├── wimoveis.ts          # 🏢 Crawler para Wimoveis
+│   ├── supabase.ts          # 💾 Integração com Supabase
+│   ├── email.ts             # 📧 Envio de emails via Resend
+│   ├── email-template.ts    # 📝 Template HTML/texto dos emails
+│   ├── types.ts             # 📐 Definições de tipos TypeScript
+│   ├── utils.ts             # 🛠️ Funções utilitárias
+│   ├── database.types.ts    # 🗄️ Tipos gerados do Supabase
+│   ├── test-connection.ts   # 🧪 Teste de conexão Supabase
+│   └── test-email.ts        # 🧪 Teste de envio de email
+├── deno.json                # ⚙️ Configuração Deno e tasks
+├── setup-supabase.sql       # 🗃️ Script de criação da tabela
+└── .env                     # 🔐 Variáveis de ambiente (criar)
+```
+
+### Descrição dos Módulos
+
+#### 📌 `main.ts` - Orquestrador Principal
+Ponto de entrada do sistema. Coordena a execução de todas as etapas:
+- Carrega configurações do `.env`
+- Chama os crawlers sequencialmente
+- Agrega os resultados
+- Sincroniza com Supabase
+- Envia notificações por email
+
+#### 🕷️ `df_imoveis.ts` e `wimoveis.ts` - Crawlers
+Cada crawler segue o mesmo padrão:
+1. **`collectListingLinks()`**: Extrai todos os links de imóveis da página de listagem
+2. **`parseProperty()`**: Acessa cada link e extrai os dados do imóvel
+3. **`extract**()`**: Funções específicas para extrair título, preço, etc.
+
+**Estratégias de Parsing:**
+- Usam Cheerio para navegação no DOM HTML
+- Seletores CSS customizados para cada site
+- Normalização de texto (remoção de espaços extras)
+- Construção de URLs absolutas
+- Validação de domínio
+
+#### 💾 `supabase.ts` - Gerenciamento de Dados
+- **`getSupabaseClient()`**: Cria e retorna instância do cliente Supabase (singleton)
+- **`insertNewProperties()`**: Lógica de inserção inteligente
+  - Consulta links existentes no banco
+  - Filtra apenas novos imóveis
+  - Insere em batch
+
+**Estratégia de Deduplicação:**
+O campo `link` é a chave primária, garantindo que o mesmo imóvel não seja inserido duas vezes.
+
+#### 📧 `email.ts` - Sistema de Notificações
+- Validação de configuração (API key, emails)
+- Geração de conteúdo HTML e texto
+- Envio via Resend API
+- Suporte a múltiplos destinatários
+- Tratamento de erros robusto
+
+#### 🎨 `email-template.ts` - Templates de Email
+- **`generateEmailHTML()`**: Template HTML responsivo
+- **`generateEmailText()`**: Versão texto simples
+- Formatação de valores, links e informações
+
+#### 🛠️ `utils.ts` - Utilitários
+- **`fetchDocument()`**: Busca e faz parsing de páginas HTML
+- **`normalizeWhitespace()`**: Remove espaços extras e quebras de linha
+- **`buildAbsoluteUrl()`**: Constrói URLs absolutas a partir de relativas
+- **`isSameDomain()`**: Valida se URL pertence ao domínio esperado
+- **`printProperty()`**: Exibe imóvel no console formatado
+
+#### 📐 `types.ts` - Tipos
+```typescript
+interface Property {
+  titulo: string;  // Título/descrição do imóvel
+  valor: string;   // Valor (formato texto)
+  link: string;    // URL do anúncio (chave primária)
+}
 ```
 
 ## 📊 Estrutura da Tabela `real_states`
@@ -147,24 +341,226 @@ deno task fmt
 deno task lint
 ```
 
-## 📝 Notas
+## 🎨 Personalizando os Crawlers
 
-- O crawler mantém um backup local em `imoveis.json` antes de sincronizar com
-  Supabase
+### Modificar Critérios de Busca
+
+Os critérios de busca estão definidos nas URLs de listagem de cada crawler:
+
+**DF Imóveis** (`src/df_imoveis.ts`):
+```typescript
+const LIST_URL =
+  "https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=90";
+```
+
+**Wimoveis** (`src/wimoveis.ts`):
+```typescript
+const LIST_URL =
+  "https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=90,&loc=Z:42705,42704&price=,1200000";
+```
+
+Você pode ajustar os parâmetros diretamente na URL ou usar o site para fazer uma busca e copiar a URL resultante.
+
+### Adicionar Novos Sites
+
+Para adicionar um novo site de imóveis:
+
+1. Crie um novo arquivo (ex: `src/novo_site.ts`)
+2. Implemente as funções:
+   ```typescript
+   async function collectListingLinks(listUrl: string): Promise<string[]>
+   async function parseProperty(url: string): Promise<Property>
+   export async function collectNovoSiteProperties(): Promise<Property[]>
+   ```
+3. Use os seletores CSS apropriados para extrair os dados
+4. Adicione no `main.ts`:
+   ```typescript
+   import { collectNovoSiteProperties } from "./novo_site.ts";
+   const novoSiteProperties = await collectNovoSiteProperties();
+   ```
+
+### Ajustar Rate Limiting
+
+O delay entre requisições está configurado em 1.2 segundos. Para ajustar:
+
+```typescript
+await delay(1200); // Altere o valor em milissegundos
+```
+
+## 🔄 Automação com Cron
+
+Para executar o crawler automaticamente em intervalos regulares:
+
+### Linux/macOS (crontab)
+
+```bash
+# Editar crontab
+crontab -e
+
+# Executar todo dia às 9h e 18h
+0 9,18 * * * cd /caminho/para/house-crawler && /caminho/para/deno task run >> /tmp/house-crawler.log 2>&1
+```
+
+### GitHub Actions
+
+Crie `.github/workflows/crawler.yml`:
+
+```yaml
+name: House Crawler
+on:
+  schedule:
+    - cron: '0 9,18 * * *'  # 9h e 18h UTC
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v2.x
+      - name: Run crawler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TO_EMAILS: ${{ secrets.TO_EMAILS }}
+        run: deno task run
+```
+
+## 📝 Notas Importantes
+
+### Funcionamento
 - A chave primária é o `link`, garantindo que não haja duplicatas
 - Imóveis já cadastrados são automaticamente ignorados
 - O campo `created_at` registra quando o imóvel foi visto pela primeira vez
 - Emails são enviados apenas quando há novos imóveis encontrados
 - O template de email é responsivo e funciona em todos os clientes de email
-- Se houver erro ao enviar o email, o crawler continua funcionando normalmente
+
+### Tratamento de Erros
+- Se houver erro ao coletar um imóvel específico, ele é registrado no console e o crawler continua
+- Se houver erro ao sincronizar com Supabase, o processo é interrompido
+- Se houver erro ao enviar email, o processo é interrompido
+
+### Performance
+- Delay de 1.2s entre requisições evita bloqueios por rate limiting
+- Inserção em batch no Supabase (mais eficiente)
+- Consulta prévia de links existentes minimiza operações desnecessárias
+
+### Web Scraping Ético
+- ✅ Respeita robots.txt quando possível
+- ✅ Implementa delays entre requisições
+- ✅ Usa User-Agent identificável
+- ✅ Não sobrecarrega os servidores
+- ⚠️ Sites podem alterar sua estrutura HTML - nesse caso, os seletores CSS precisarão ser atualizados
 
 ## 🔒 Segurança
 
-- As variáveis de ambiente nunca devem ser commitadas
-- Use a chave `ANON_KEY` para operações públicas
-- Configure políticas RLS (Row Level Security) no Supabase conforme necessário
-- O script SQL já inclui políticas básicas de segurança
+### Boas Práticas Implementadas
+
+- ✅ Variáveis de ambiente em arquivo `.env` (não commitado)
+- ✅ Uso de chave `ANON_KEY` para operações públicas
+- ✅ Políticas RLS (Row Level Security) no Supabase
+- ✅ Validação de dados antes de inserção
+- ✅ Tratamento adequado de erros
+
+### Recomendações Adicionais
+
+- 🔐 Configure políticas RLS personalizadas no Supabase conforme necessário
+- 🔑 Nunca commit suas chaves de API no repositório
+- 🔄 Rotacione suas chaves periodicamente
+- 📧 Use domínio verificado no Resend para evitar spam
+
+## 🐛 Troubleshooting
+
+### Erro: "Variáveis de ambiente não encontradas"
+
+**Solução**: Verifique se o arquivo `.env` existe na raiz do projeto e contém todas as variáveis necessárias.
+
+### Erro ao coletar imóveis (HTTP 403/404)
+
+**Causa**: O site pode ter mudado sua estrutura ou está bloqueando o crawler.
+
+**Solução**: 
+1. Verifique se a URL de listagem ainda está válida
+2. Atualize os seletores CSS no crawler correspondente
+3. Teste manualmente acessando a URL no navegador
+
+### Emails não estão sendo enviados
+
+**Verificações**:
+1. Execute `deno task test-email` para testar a configuração
+2. Verifique se `RESEND_API_KEY` está correta
+3. Confirme que `TO_EMAILS` está no formato correto
+4. Se usar domínio personalizado, verifique se está verificado no Resend
+
+### Imóveis duplicados no banco
+
+**Causa**: Improável, pois o `link` é chave primária.
+
+**Solução**: Verifique se a função `insertNewProperties` está sendo chamada corretamente.
+
+### Performance lenta
+
+**Possíveis causas**:
+- Muitos imóveis na listagem
+- Latência de rede alta
+- Rate limiting dos sites
+
+**Soluções**:
+- Aumente o delay entre requisições
+- Filtre melhor os critérios de busca
+- Execute em horários de menor tráfego
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para:
+
+1. **Adicionar novos sites**: Crie crawlers para outros portais imobiliários
+2. **Melhorar parsers**: Otimizar a extração de dados
+3. **Adicionar recursos**: Filtros avançados, mais campos de dados, etc.
+4. **Reportar bugs**: Abra uma issue descrevendo o problema
+5. **Melhorar documentação**: Correções e esclarecimentos
+
+### Como Contribuir
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`)
+3. Commit suas mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+4. Push para a branch (`git push origin feature/nova-funcionalidade`)
+5. Abra um Pull Request
+
+## 📊 Roadmap Futuro
+
+Possíveis melhorias planejadas:
+
+- [ ] Suporte a mais portais imobiliários (OLX, VivaReal, Imovelweb)
+- [ ] Interface web para configuração
+- [ ] Filtros avançados (distância de pontos de interesse, etc.)
+- [ ] Análise de preços e alertas de oportunidades
+- [ ] Histórico de variação de preços
+- [ ] Integração com Telegram/WhatsApp
+- [ ] Dashboard com estatísticas
+- [ ] Detecção de imóveis removidos
 
 ## 📄 Licença
 
-Este projeto é de código aberto.
+Este projeto é de código aberto e está disponível sob a licença MIT.
+
+---
+
+## 📞 Suporte
+
+Se você encontrou algum problema ou tem sugestões:
+
+- 🐛 Abra uma [issue](../../issues) no GitHub
+- 💡 Compartilhe ideias de melhorias
+- ⭐ Dê uma estrela se este projeto foi útil!
+
+---
+
+**Desenvolvido com ❤️ usando Deno e TypeScript**
+
+*Última atualização: Outubro 2025*
