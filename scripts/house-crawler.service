@@ -1,0 +1,22 @@
+[Unit]
+Description=House Crawler - Busca anúncios de imóveis
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=beigelman
+WorkingDirectory=/home/beigelman/dev/house-crawler
+ExecStart=/home/linuxbrew/.linuxbrew/bin/deno task run
+StandardOutput=journal
+StandardError=journal
+
+# Variáveis de ambiente (se necessário)
+# Environment="SUPABASE_URL=your-url"
+# Environment="SUPABASE_KEY=your-key"
+# OU melhor: usar EnvironmentFile
+# EnvironmentFile=/home/beigelman/dev/house-crawler/.env
+
+[Install]
+WantedBy=multi-user.target
+

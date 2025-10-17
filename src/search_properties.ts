@@ -1,25 +1,24 @@
 import { load } from "@std/dotenv";
-import { collectDfImoveisProperties } from "./providers/df_imoveis.ts";
-import { collectWimoveisProperties } from "./providers/wimoveis.ts";
 import { insertNewProperties } from "./supabase/supabase.ts";
 import { sendNewPropertiesEmail } from "./email/email.ts";
-import { Property } from "./types.ts";
+import { Property, PropertyProvider, SearchParams } from "./types.ts";
+import { DfImoveisProvider } from "./providers/df_imoveis.ts";
+import { WimoveisProvider } from "./providers/wimoveis.ts";
 
 // Carrega variáveis de ambiente do arquivo .env
 await load({ export: true });
 
-async function searchProperties(): Promise<void> {
+async function searchProperties(providers: PropertyProvider[]): Promise<void> {
   console.log("🏠 Iniciando coleta de imóveis...\n");
 
-  console.log("📍 Coletando imóveis do DF Imóveis...");
-  const dfProperties = await collectDfImoveisProperties();
-  console.log(`✓ ${dfProperties.length} imóveis encontrados\n`);
+  const allProperties: Property[] = [];
+  for (const provider of providers) {
+    console.log(`📍 Coletando imóveis do ${provider.name}...\n`);
+    const properties = await provider.collect();
+    console.log(`✓ ${properties.length} imóveis encontrados\n`);
+    allProperties.push(...properties);
+  }
 
-  console.log("📍 Coletando imóveis do Wimoveis...\n");
-  const wimoveisProperties = await collectWimoveisProperties();
-  console.log(`✓ ${wimoveisProperties.length} imóveis encontrados\n`);
-
-  const allProperties = [...dfProperties, ...wimoveisProperties];
   console.log(`📊 Total de imóveis coletados: ${allProperties.length}\n`);
 
   if (allProperties.length === 0) {
@@ -42,20 +41,36 @@ async function searchProperties(): Promise<void> {
     Deno.exit(1);
   }
 
-  if (newProperties.length > 0) {
-    console.log("📧 Enviando notificação por email...\n");
-    const result = await sendNewPropertiesEmail(newProperties);
-    if (result.success) {
-      console.log("✅ Email enviado com sucesso!\n");
-    } else {
-      console.error("\n❌ Erro ao enviar email:", result.error);
-      Deno.exit(1);
-    }
-  } else {
+  if (newProperties.length === 0) {
     console.log("ℹ️  Nenhum imóvel novo encontrado. Email não será enviado.\n");
+    Deno.exit(0);
   }
+  
+  console.log("📧 Enviando notificação por email...\n");
+  const result = await sendNewPropertiesEmail([] as Property[]);
+  if (result.error) {
+    console.error("\n❌ Erro ao enviar email:", result.error);
+    Deno.exit(1);
+  }
+
+  console.log("✅ Email enviado com sucesso!\n");
 }
 
 if (import.meta.main) {
-  await searchProperties();
+  const searchParams: SearchParams = {
+    neighborhoods: ["asa-norte", "asa-sul", "octogonal"],
+    numberOfRooms: [3, 4],
+    numberOfSuites: 1,
+    hasElevator: true,
+    hasParking: true,
+    minArea: 90,
+    maxArea: 120,
+    minPrice: 500000,
+    maxPrice: 1200000,
+  };
+
+  const dfImoveisProvider = new DfImoveisProvider(searchParams);
+  const wimoveisProvider = new WimoveisProvider(searchParams);
+
+  await searchProperties([dfImoveisProvider, wimoveisProvider]);
 }

@@ -1,3 +1,5 @@
 __pypackages__/
 __pycache__
 .env
+.DS_Store
+.vscode

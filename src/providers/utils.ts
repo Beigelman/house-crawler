@@ -1,5 +1,5 @@
 import { type CheerioAPI, load } from "cheerio";
-import { Property } from "./types.ts";
+import { Property } from "../types.ts";
 
 export async function fetchDocument(
   url: string,
