@@ -45,9 +45,9 @@ async function searchProperties(providers: PropertyProvider[]): Promise<void> {
     console.log("ℹ️  Nenhum imóvel novo encontrado. Email não será enviado.\n");
     Deno.exit(0);
   }
-  
+
   console.log("📧 Enviando notificação por email...\n");
-  const result = await sendNewPropertiesEmail([] as Property[]);
+  const result = await sendNewPropertiesEmail(newProperties);
   if (result.error) {
     console.error("\n❌ Erro ao enviar email:", result.error);
     Deno.exit(1);

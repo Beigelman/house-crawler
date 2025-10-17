@@ -59,6 +59,8 @@ export class WimoveisProvider extends PropertyProvider {
     const $ = await this.getDocument(listUrl);
     const links = new Set<string>();
 
+    console.log(`Collecting links from list page: ${listUrl}\n`);
+
     $("div.postingCardLayout-module__posting-card-layout").each(
       (_, element) => {
         const href = $(element).attr("data-to-posting");
@@ -72,6 +74,29 @@ export class WimoveisProvider extends PropertyProvider {
         }
       },
     );
+
+    const numberOfPages = $("a.paging-module__page-item").length;
+
+    for (let page = 2; page <= numberOfPages; page++) {
+      const nextPageUrl = `${listUrl}?page=${page}`;
+
+      console.log(`Collecting links from list page: ${nextPageUrl}\n`);
+
+      const $ = await this.getDocument(nextPageUrl);
+      $("div.postingCardLayout-module__posting-card-layout").each(
+        (_, element) => {
+          const href = $(element).attr("data-to-posting");
+          if (!href || !this.isPropertyUrl(href)) {
+            return;
+          }
+
+          const absolute = buildAbsoluteUrl(this.baseUrl, href);
+          if (isSameDomain(absolute, "wimoveis.com.br")) {
+            links.add(absolute);
+          }
+        },
+      );
+    }
 
     return Array.from(links);
   }

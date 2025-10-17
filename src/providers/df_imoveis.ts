@@ -19,6 +19,8 @@ export class DfImoveisProvider extends PropertyProvider {
     const $ = await this.getDocument(listUrl);
     const links = new Set<string>();
 
+    console.log(`Collecting links from list page: ${listUrl}\n`);
+
     $("a[href]").each((_, element) => {
       const href = $(element).attr("href") ?? "";
       if (!href.includes("/imovel/")) {
@@ -30,6 +32,28 @@ export class DfImoveisProvider extends PropertyProvider {
         links.add(absolute);
       }
     });
+
+    const nextPageSegment = $("ul.pagination");
+    const numberOfPages = nextPageSegment.find("li").length - 2;
+
+    for (let page = 2; page <= numberOfPages; page++) {
+      const nextPageUrl = `${listUrl}&page=${page}`;
+
+      console.log(`Collecting links from list page: ${nextPageUrl}\n`);
+      
+      const $ = await this.getDocument(nextPageUrl);
+      $("a[href]").each((_, element) => {
+        const href = $(element).attr("href") ?? "";
+        if (!href.includes("/imovel/")) {
+          return;
+        }
+  
+        const absolute = buildAbsoluteUrl(this.baseUrl, href);
+        if (isSameDomain(absolute, "dfimoveis.com.br")) {
+          links.add(absolute);
+        }
+      });
+    }
 
     return Array.from(links).sort();
   }
