@@ -5,6 +5,7 @@ import {
   buildAbsoluteUrl,
   isSameDomain,
   normalizeWhitespace,
+  sanitizeUrl,
 } from "./utils.ts";
 
 export class DfImoveisProvider extends PropertyProvider {
@@ -103,7 +104,7 @@ export class DfImoveisProvider extends PropertyProvider {
     return {
       titulo: description,
       valor: price,
-      link: url,
+      link: sanitizeUrl(url),
     };
   }
 }

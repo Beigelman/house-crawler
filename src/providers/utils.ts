@@ -33,6 +33,16 @@ export function buildAbsoluteUrl(base: string, href: string): string {
   return new URL(href, base).toString();
 }
 
+
+export function sanitizeUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.origin + urlObj.pathname;
+  } catch (_) {
+    return url;
+  }
+}
+
 export function isSameDomain(url: string, domain: string): boolean {
   try {
     const hostname = new URL(url).hostname;

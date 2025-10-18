@@ -5,6 +5,7 @@ import {
   buildAbsoluteUrl,
   isSameDomain,
   normalizeWhitespace,
+  sanitizeUrl,
 } from "./utils.ts";
 
 export class WimoveisProvider extends PropertyProvider {
@@ -124,7 +125,7 @@ export class WimoveisProvider extends PropertyProvider {
     return {
       titulo: title,
       valor: price,
-      link: url,
+      link: sanitizeUrl(url),
     };
   }
 }
