@@ -1,6 +1,6 @@
-import { Resend } from "resend";
-import type { Property } from "../types.ts";
-import { generateEmailHTML, generateEmailText } from "./email-template.ts";
+import { Resend } from 'resend';
+import type { Property } from '../types.ts';
+import { generateEmailHTML, generateEmailText } from './email-template.ts';
 
 type EmailConfig = {
   apiKey: string | undefined;
@@ -10,10 +10,10 @@ type EmailConfig = {
 
 function getEmailConfig(): EmailConfig {
   const toEmails =
-    Deno.env.get("TO_EMAILS")?.split(",").map((email) => email.trim()) || [];
+    Deno.env.get('TO_EMAILS')?.split(',').map((email) => email.trim()) || [];
   return {
-    apiKey: Deno.env.get("RESEND_API_KEY"),
-    fromEmail: Deno.env.get("FROM_EMAIL") || "onboarding@resend.dev",
+    apiKey: Deno.env.get('RESEND_API_KEY'),
+    fromEmail: Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev',
     toEmails,
   };
 }
@@ -27,11 +27,11 @@ function validateEmailConfig(
   const errors: string[] = [];
 
   if (!config.apiKey) {
-    errors.push("RESEND_API_KEY não está configurada");
+    errors.push('RESEND_API_KEY não está configurada');
   }
 
   if (!config.toEmails) {
-    errors.push("TO_EMAILS não está configurada");
+    errors.push('TO_EMAILS não está configurada');
   }
 
   return {
@@ -53,7 +53,7 @@ export async function sendNewPropertiesEmail(
   if (!validation.valid) {
     return {
       success: false,
-      error: `Configuração de email inválida: ${validation.errors.join(", ")}`,
+      error: `Configuração de email inválida: ${validation.errors.join(', ')}`,
     };
   }
 
@@ -61,7 +61,7 @@ export async function sendNewPropertiesEmail(
   if (properties.length === 0) {
     return {
       success: true,
-      error: "Nenhum imóvel novo para enviar",
+      error: 'Nenhum imóvel novo para enviar',
     };
   }
 
@@ -81,8 +81,8 @@ export async function sendNewPropertiesEmail(
       to: recipients,
       subject: `🏠 ${properties.length} ${
         properties.length === 1
-          ? "Novo Imóvel Encontrado"
-          : "Novos Imóveis Encontrados"
+          ? 'Novo Imóvel Encontrado'
+          : 'Novos Imóveis Encontrados'
       }!`,
       html: htmlContent,
       text: textContent,

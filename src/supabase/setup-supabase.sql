@@ -15,6 +15,11 @@ CREATE INDEX IF NOT EXISTS idx_real_states_created_at ON real_states(created_at 
 -- Habilitar Row Level Security (RLS)
 ALTER TABLE real_states ENABLE ROW LEVEL SECURITY;
 
+-- Remover políticas antigas se existirem
+DROP POLICY IF EXISTS "Permitir leitura pública" ON real_states;
+DROP POLICY IF EXISTS "Permitir inserção" ON real_states;
+DROP POLICY IF EXISTS "Permitir deleção" ON real_states;
+
 -- Política de segurança: permitir leitura pública (para queries)
 CREATE POLICY "Permitir leitura pública"
   ON real_states
@@ -27,6 +32,12 @@ CREATE POLICY "Permitir inserção"
   ON real_states
   FOR INSERT
   WITH CHECK (true);
+
+-- Política de segurança: permitir deleção
+CREATE POLICY "Permitir deleção"
+  ON real_states
+  FOR DELETE
+  USING (true);
 
 -- Comentários descritivos
 COMMENT ON TABLE real_states IS 'Tabela de armazenamento de imóveis coletados pelos crawlers';

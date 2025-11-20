@@ -1,20 +1,20 @@
-import type { Property } from "../types.ts";
+import type { Property } from '../types.ts';
 
 /**
  * Formata o valor do imóvel para exibição
  */
 function formatPrice(price: string): string {
   // Se já está no formato "R$ X.XXX.XXX", retorna direto
-  if (price.startsWith("R$")) {
+  if (price.startsWith('R$')) {
     return price;
   }
 
   // Se é apenas número, adiciona R$ e formata
-  const numericValue = price.replace(/\D/g, "");
+  const numericValue = price.replace(/\D/g, '');
   if (numericValue.length > 0) {
-    const formatted = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
       minimumFractionDigits: 0,
     }).format(parseInt(numericValue));
     return formatted;
@@ -53,7 +53,7 @@ export function generateEmailHTML(properties: Property[]): string {
         </table>
       </td>
     </tr>
-  `).join("");
+  `).join('');
 
   return `
 <!DOCTYPE html>
@@ -77,7 +77,7 @@ export function generateEmailHTML(properties: Property[]): string {
               </h1>
               <p style="margin: 10px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 16px;">
                 Encontramos ${properties.length} ${
-    properties.length === 1 ? "novo imóvel" : "novos imóveis"
+    properties.length === 1 ? 'novo imóvel' : 'novos imóveis'
   } que podem te interessar!
               </p>
             </td>
@@ -95,7 +95,7 @@ export function generateEmailHTML(properties: Property[]): string {
                       </div>
                       <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">
                         ${
-    properties.length === 1 ? "Imóvel Novo" : "Imóveis Novos"
+    properties.length === 1 ? 'Imóvel Novo' : 'Imóveis Novos'
   }
                       </div>
                     </div>
@@ -137,9 +137,9 @@ export function generateEmailHTML(properties: Property[]): string {
 export function generateEmailText(properties: Property[]): string {
   let text = `🏠 NOVOS IMÓVEIS ENCONTRADOS\n\n`;
   text += `Encontramos ${properties.length} ${
-    properties.length === 1 ? "novo imóvel" : "novos imóveis"
+    properties.length === 1 ? 'novo imóvel' : 'novos imóveis'
   } que podem te interessar!\n\n`;
-  text += `${"=".repeat(60)}\n\n`;
+  text += `${'='.repeat(60)}\n\n`;
 
   properties.forEach((property, index) => {
     text += `${index + 1}. ${property.titulo}\n`;
@@ -147,7 +147,7 @@ export function generateEmailText(properties: Property[]): string {
     text += `   Link: ${property.link}\n\n`;
   });
 
-  text += `${"=".repeat(60)}\n\n`;
+  text += `${'='.repeat(60)}\n\n`;
   text +=
     `Este é um email automático do sistema de monitoramento de imóveis.\n`;
   text += `© ${new Date().getFullYear()} House Crawler\n`;

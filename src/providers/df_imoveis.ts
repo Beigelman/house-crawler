@@ -1,19 +1,19 @@
-import type { CheerioAPI } from "cheerio";
+import type { CheerioAPI } from 'cheerio';
 
-import { Property, PropertyProvider, SearchParams } from "../types.ts";
+import { Property, PropertyProvider, SearchParams } from '../types.ts';
 import {
   buildAbsoluteUrl,
   isSameDomain,
   normalizeWhitespace,
   sanitizeUrl,
-} from "./utils.ts";
+} from './utils.ts';
 
 export class DfImoveisProvider extends PropertyProvider {
   protected baseUrl: string;
 
   constructor(searchParams: SearchParams) {
-    super("DF Imóveis", searchParams);
-    this.baseUrl = "https://www.dfimoveis.com.br";
+    super('DF Imóveis', searchParams);
+    this.baseUrl = 'https://www.dfimoveis.com.br';
   }
 
   protected async collectListingLinks(listUrl: string): Promise<string[]> {
@@ -22,35 +22,35 @@ export class DfImoveisProvider extends PropertyProvider {
 
     console.log(`Collecting links from list page: ${listUrl}\n`);
 
-    $("a[href]").each((_, element) => {
-      const href = $(element).attr("href") ?? "";
-      if (!href.includes("/imovel/")) {
+    $('a[href]').each((_, element) => {
+      const href = $(element).attr('href') ?? '';
+      if (!href.includes('/imovel/')) {
         return;
       }
 
       const absolute = buildAbsoluteUrl(this.baseUrl, href);
-      if (isSameDomain(absolute, "dfimoveis.com.br")) {
+      if (isSameDomain(absolute, 'dfimoveis.com.br')) {
         links.add(absolute);
       }
     });
 
-    const nextPageSegment = $("ul.pagination");
-    const numberOfPages = nextPageSegment.find("li").length - 2;
+    const nextPageSegment = $('ul.pagination');
+    const numberOfPages = nextPageSegment.find('li').length - 2;
 
     for (let page = 2; page <= numberOfPages; page++) {
       const nextPageUrl = `${listUrl}&page=${page}`;
 
       console.log(`Collecting links from list page: ${nextPageUrl}\n`);
-      
+
       const $ = await this.getDocument(nextPageUrl);
-      $("a[href]").each((_, element) => {
-        const href = $(element).attr("href") ?? "";
-        if (!href.includes("/imovel/")) {
+      $('a[href]').each((_, element) => {
+        const href = $(element).attr('href') ?? '';
+        if (!href.includes('/imovel/')) {
           return;
         }
-  
+
         const absolute = buildAbsoluteUrl(this.baseUrl, href);
-        if (isSameDomain(absolute, "dfimoveis.com.br")) {
+        if (isSameDomain(absolute, 'dfimoveis.com.br')) {
           links.add(absolute);
         }
       });
@@ -72,27 +72,27 @@ export class DfImoveisProvider extends PropertyProvider {
     }: SearchParams,
   ): string {
     return `${this.baseUrl}/venda/df/brasilia/${
-      neighborhoods.join(",")
+      neighborhoods.join(',')
     }/imoveis/${
-      numberOfRooms.join(",")
+      numberOfRooms.join(',')
     }-quartos?suites=${numberOfSuites}&vagasdegaragem=${
-      hasParking ? "1" : "0"
+      hasParking ? '1' : '0'
     }&valorinicial=${minPrice}&valorfinal=${maxPrice}&areainicial=${minArea}&areafinal=${maxArea}`;
   }
 
   private extractDescription($: CheerioAPI): string {
     const headline = normalizeWhitespace(
-      $("div.imovel-title h2").first().text(),
+      $('div.imovel-title h2').first().text(),
     );
     if (headline) {
       return headline;
     }
 
-    return "";
+    return '';
   }
 
   private extractPrice($: CheerioAPI): string {
-    const price = normalizeWhitespace($("h4.precoAntigoSalao").first().text());
+    const price = normalizeWhitespace($('h4.precoAntigoSalao').first().text());
     return price;
   }
 
@@ -106,5 +106,19 @@ export class DfImoveisProvider extends PropertyProvider {
       valor: price,
       link: sanitizeUrl(url),
     };
+  }
+
+  async isValid(url: string): Promise<boolean> {
+    try {
+      const $ = await this.getDocument(url);
+      const price = this.extractPrice($);
+      const description = this.extractDescription($);
+
+      // Link é válido se conseguir extrair título E preço
+      return !!(description && price);
+    } catch (_error) {
+      // Se houver erro ao acessar a página (404, rede, etc), link é inválido
+      return false;
+    }
   }
 }

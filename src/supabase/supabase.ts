@@ -1,6 +1,6 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { Property } from "../types.ts";
-import { Database } from "./database.types.ts";
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { Property } from '../types.ts';
+import { Database } from './database.types.ts';
 
 let supabaseClient: SupabaseClient<Database>;
 
@@ -9,12 +9,12 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     return supabaseClient;
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      "Variáveis de ambiente SUPABASE_URL e SUPABASE_ANON_KEY são obrigatórias",
+      'Variáveis de ambiente SUPABASE_URL e SUPABASE_ANON_KEY são obrigatórias',
     );
   }
 
@@ -31,9 +31,9 @@ export async function insertNewProperties(
   const client = getSupabaseClient();
 
   const { data, error } = await client
-    .from("real_states")
-    .select("link")
-    .in("link", properties.map((property) => property.link));
+    .from('real_states')
+    .select('link')
+    .in('link', properties.map((property) => property.link));
 
   if (error) {
     throw new Error(`Erro ao buscar imóveis: ${error.message}`);
@@ -44,7 +44,7 @@ export async function insertNewProperties(
   );
 
   const { error: insertError } = await client
-    .from("real_states")
+    .from('real_states')
     .insert(newProperties);
 
   if (insertError) {
@@ -52,4 +52,43 @@ export async function insertNewProperties(
   }
 
   return newProperties;
+}
+
+/**
+ * Busca todos os imóveis salvos no Supabase
+ */
+export async function getAllProperties(): Promise<Property[]> {
+  const client = getSupabaseClient();
+
+  const { data, error } = await client
+    .from('real_states')
+    .select('titulo, valor, link');
+
+  if (error) {
+    throw new Error(`Erro ao buscar imóveis: ${error.message}`);
+  }
+
+  return data || [];
+}
+
+/**
+ * Deleta imóveis do Supabase pelos links fornecidos
+ */
+export async function deleteProperties(
+  links: string[],
+): Promise<void> {
+  if (links.length === 0) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+
+  const { error } = await client
+    .from('real_states')
+    .delete()
+    .in('link', links);
+
+  if (error) {
+    throw new Error(`Erro ao deletar imóveis: ${error.message}`);
+  }
 }

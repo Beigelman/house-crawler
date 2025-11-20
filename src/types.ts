@@ -1,6 +1,6 @@
-import { delay } from "@std/async/delay";
-import type { CheerioAPI } from "cheerio";
-import { load } from "cheerio";
+import { delay } from '@std/async/delay';
+import type { CheerioAPI } from 'cheerio';
+import { load } from 'cheerio';
 
 export interface Property {
   titulo: string;
@@ -27,20 +27,20 @@ export type SearchParams = {
 };
 
 const HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-  "Accept":
-    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-  "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-  "Accept-Encoding": "gzip, deflate, br",
-  "Referer": "https://www.wimoveis.com.br/",
-  "Connection": "keep-alive",
-  "Sec-Fetch-Dest": "document",
-  "Sec-Fetch-Mode": "navigate",
-  "Sec-Fetch-Site": "same-origin",
-  "Sec-Fetch-User": "?1",
-  "Upgrade-Insecure-Requests": "1",
-  "Cache-Control": "max-age=0",
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Accept':
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Referer': 'https://www.wimoveis.com.br/',
+  'Connection': 'keep-alive',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+  'Cache-Control': 'max-age=0',
 };
 
 export abstract class PropertyProvider {
@@ -74,10 +74,7 @@ export abstract class PropertyProvider {
           results.push(property);
           this.printProperty(property);
         } catch (error) {
-          console.error(
-            `[${this.name}] Erro ao processar ${link}:`,
-            error,
-          );
+          console.error(`[${this.name}] Erro ao processar ${link}:`, error);
         }
 
         await delay(1200);
@@ -89,6 +86,12 @@ export abstract class PropertyProvider {
       return [];
     }
   }
+
+  /**
+   * Valida se um link de propriedade ainda é válido
+   * Verifica se a página existe E se os elementos (título/preço) podem ser extraídos
+   */
+  abstract isValid(url: string): Promise<boolean>;
 
   /**
    * Busca o documento HTML usando Cheerio
@@ -132,14 +135,14 @@ export abstract class PropertyProvider {
    * Tratamento de erros genérico
    */
   protected handleError(error: unknown): void {
-    if (error instanceof Error && error.message.includes("403")) {
+    if (error instanceof Error && error.message.includes('403')) {
       console.error(
         `⚠️  AVISO: ${this.name} bloqueou o acesso (403 Forbidden).`,
       );
       console.error(
-        "   Isso é comum em ambientes de CI/CD como GitHub Actions.",
+        '   Isso é comum em ambientes de CI/CD como GitHub Actions.',
       );
-      console.error("   O crawler continuará apenas com os outros sites.\n");
+      console.error('   O crawler continuará apenas com os outros sites.\n');
     } else {
       console.error(
         `❌ Erro ao coletar imóveis do ${this.name}:`,

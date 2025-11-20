@@ -16,12 +16,12 @@ interface RobotRule {
  * Busca e faz parsing do robots.txt de um site
  */
 export async function fetchRobotsTxt(baseUrl: string): Promise<string> {
-  const robotsUrl = new URL("/robots.txt", baseUrl).toString();
+  const robotsUrl = new URL('/robots.txt', baseUrl).toString();
   const response = await fetch(robotsUrl);
 
   if (!response.ok) {
     console.warn(`⚠️  robots.txt não encontrado em ${robotsUrl}`);
-    return "";
+    return '';
   }
 
   return await response.text();
@@ -34,24 +34,24 @@ export function parseRobotsTxt(content: string): RobotRule[] {
   const rules: RobotRule[] = [];
   let currentRule: RobotRule | null = null;
 
-  const lines = content.split("\n");
+  const lines = content.split('\n');
 
   for (const line of lines) {
     const trimmed = line.trim();
 
     // Ignora comentários e linhas vazias
-    if (!trimmed || trimmed.startsWith("#")) {
+    if (!trimmed || trimmed.startsWith('#')) {
       continue;
     }
 
-    const [key, ...valueParts] = trimmed.split(":");
-    const value = valueParts.join(":").trim();
+    const [key, ...valueParts] = trimmed.split(':');
+    const value = valueParts.join(':').trim();
 
     if (!key || !value) continue;
 
     const lowerKey = key.toLowerCase();
 
-    if (lowerKey === "user-agent") {
+    if (lowerKey === 'user-agent') {
       // Inicia uma nova regra
       if (currentRule) {
         rules.push(currentRule);
@@ -62,9 +62,9 @@ export function parseRobotsTxt(content: string): RobotRule[] {
         allow: [],
       };
     } else if (currentRule) {
-      if (lowerKey === "disallow") {
+      if (lowerKey === 'disallow') {
         currentRule.disallow.push(value);
-      } else if (lowerKey === "allow") {
+      } else if (lowerKey === 'allow') {
         currentRule.allow.push(value);
       }
     }
@@ -84,14 +84,14 @@ export function parseRobotsTxt(content: string): RobotRule[] {
 export function isUrlAllowed(
   url: string,
   rules: RobotRule[],
-  userAgent = "*",
+  userAgent = '*',
 ): boolean {
   const urlObj = new URL(url);
   const path = urlObj.pathname + urlObj.search;
 
   // Encontra as regras aplicáveis (específicas primeiro, depois genéricas)
   const applicableRules = rules.filter(
-    (rule) => rule.userAgent === userAgent || rule.userAgent === "*",
+    (rule) => rule.userAgent === userAgent || rule.userAgent === '*',
   );
 
   if (applicableRules.length === 0) {
@@ -125,7 +125,7 @@ export function isUrlAllowed(
  * Suporta wildcards (* e $)
  */
 function matchesPattern(path: string, pattern: string): boolean {
-  if (pattern === "") {
+  if (pattern === '') {
     return true; // Pattern vazio significa tudo
   }
 
@@ -134,15 +134,15 @@ function matchesPattern(path: string, pattern: string): boolean {
 
   // Escapa caracteres especiais de regex, exceto * e $
   let regexPattern = pattern
-    .replace(/[.+?^{}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*");
+    .replace(/[.+?^{}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*');
 
   // $ no final significa "fim da string"
-  if (regexPattern.endsWith("$")) {
-    regexPattern = regexPattern.slice(0, -1) + "$";
+  if (regexPattern.endsWith('$')) {
+    regexPattern = regexPattern.slice(0, -1) + '$';
   } else {
     // Se não termina com $, pode haver qualquer coisa depois
-    regexPattern = "^" + regexPattern;
+    regexPattern = '^' + regexPattern;
   }
 
   const regex = new RegExp(regexPattern);
@@ -164,7 +164,7 @@ export async function checkUrlAgainstRobotsTxt(
     if (!robotsTxt) {
       return {
         allowed: true,
-        reason: "Nenhum robots.txt encontrado - assumindo permitido",
+        reason: 'Nenhum robots.txt encontrado - assumindo permitido',
       };
     }
 
@@ -174,8 +174,8 @@ export async function checkUrlAgainstRobotsTxt(
     return {
       allowed,
       reason: allowed
-        ? "URL permitida pelo robots.txt"
-        : "URL bloqueada pelo robots.txt",
+        ? 'URL permitida pelo robots.txt'
+        : 'URL bloqueada pelo robots.txt',
     };
   } catch (error) {
     return {

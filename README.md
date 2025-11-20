@@ -393,14 +393,14 @@ Os critérios de busca estão definidos nas URLs de listagem de cada crawler:
 
 ```typescript
 const LIST_URL =
-  "https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=90";
+  'https://www.dfimoveis.com.br/venda/df/brasilia/asa-norte,asa-sul/imoveis/3,4-quartos?suites=1&vagasdegaragem=1&valorfinal=1200000&areainicial=90';
 ```
 
 **Wimoveis** (`src/wimoveis.ts`):
 
 ```typescript
 const LIST_URL =
-  "https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=90,&loc=Z:42705,42704&price=,1200000";
+  'https://www.wimoveis.com.br/venda/apartamentos/brasil/desde-3-ate-4-quartos/areac-elevador?areaUnit=1&bathroom=2&coveredArea=90,&loc=Z:42705,42704&price=,1200000';
 ```
 
 Você pode ajustar os parâmetros diretamente na URL ou usar o site para fazer uma
@@ -420,7 +420,7 @@ Para adicionar um novo site de imóveis:
 3. Use os seletores CSS apropriados para extrair os dados
 4. Adicione no `main.ts`:
    ```typescript
-   import { collectNovoSiteProperties } from "./novo_site.ts";
+   import { collectNovoSiteProperties } from './novo_site.ts';
    const novoSiteProperties = await collectNovoSiteProperties();
    ```
 
@@ -457,7 +457,7 @@ Crie `.github/workflows/crawler.yml`:
 name: House Crawler
 on:
   schedule:
-    - cron: "0 9,18 * * *" # 9h e 18h UTC
+    - cron: '0 9,18 * * *' # 9h e 18h UTC
   workflow_dispatch:
 
 jobs:
@@ -658,7 +658,7 @@ Deploy em um servidor VPS (DigitalOcean, AWS, etc.):
 Adicione suporte a proxies residenciais nos crawlers:
 
 ```typescript
-const PROXY_URL = Deno.env.get("PROXY_URL");
+const PROXY_URL = Deno.env.get('PROXY_URL');
 // Configurar proxy nas requisições
 ```
 

@@ -17,18 +17,22 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-# Parar timer
-echo "⏹️  Parando timer..."
+# Parar timers
+echo "⏹️  Parando timers..."
 sudo systemctl stop house-crawler.timer 2>/dev/null || true
+sudo systemctl stop house-validator.timer 2>/dev/null || true
 
-# Desabilitar timer
-echo "❌ Desabilitando timer..."
+# Desabilitar timers
+echo "❌ Desabilitando timers..."
 sudo systemctl disable house-crawler.timer 2>/dev/null || true
+sudo systemctl disable house-validator.timer 2>/dev/null || true
 
 # Remover arquivos
 echo "🗑️  Removendo arquivos de /etc/systemd/system/..."
 sudo rm -f /etc/systemd/system/house-crawler.service
 sudo rm -f /etc/systemd/system/house-crawler.timer
+sudo rm -f /etc/systemd/system/house-validator.service
+sudo rm -f /etc/systemd/system/house-validator.timer
 
 # Recarregar systemd
 echo "🔄 Recarregando systemd daemon..."
@@ -40,6 +44,6 @@ sudo systemctl reset-failed 2>/dev/null || true
 echo ""
 echo -e "${GREEN}✅ Desinstalação concluída!${NC}"
 echo ""
-echo "Os arquivos locais (house-crawler.service e house-crawler.timer) foram mantidos."
+echo "Os arquivos locais (house-crawler.* e house-validator.*) foram mantidos."
 echo "Para reinstalar, execute: ./install-systemd.sh"
 

@@ -1,5 +1,5 @@
-import { type CheerioAPI, load } from "cheerio";
-import { Property } from "../types.ts";
+import { type CheerioAPI, load } from 'cheerio';
+import { Property } from '../types.ts';
 
 export async function fetchDocument(
   url: string,
@@ -24,15 +24,14 @@ export function printProperty(property: Property): void {
 
 export function normalizeWhitespace(value: string | undefined | null): string {
   if (!value) {
-    return "";
+    return '';
   }
-  return value.replace(/\s+/g, " ").trim();
+  return value.replace(/\s+/g, ' ').trim();
 }
 
 export function buildAbsoluteUrl(base: string, href: string): string {
   return new URL(href, base).toString();
 }
-
 
 export function sanitizeUrl(url: string): string {
   try {
