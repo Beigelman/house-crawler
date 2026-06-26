@@ -29,6 +29,20 @@ export function normalizeWhitespace(value: string | undefined | null): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+export function priceParser(value: string | undefined | null): string {
+  const normalized = normalizeWhitespace(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const price = normalizeWhitespace(normalized.replaceAll('R$', ''));
+  if (!price) {
+    return 'R$';
+  }
+
+  return `R$ ${price}`;
+}
+
 export function buildAbsoluteUrl(base: string, href: string): string {
   return new URL(href, base).toString();
 }

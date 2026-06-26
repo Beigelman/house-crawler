@@ -5,6 +5,7 @@ import {
   buildAbsoluteUrl,
   isSameDomain,
   normalizeWhitespace,
+  priceParser,
   sanitizeUrl,
 } from './utils.ts';
 
@@ -107,7 +108,7 @@ export class WimoveisProvider extends PropertyProvider {
     for (const span of spans.toArray()) {
       const text = normalizeWhitespace($(span).text());
       if (text.includes('R$')) {
-        return text.replace(/venda/i, '').trim();
+        return priceParser(text.replace(/venda/i, ''));
       }
     }
     return '';

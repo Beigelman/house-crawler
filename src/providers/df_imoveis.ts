@@ -5,6 +5,7 @@ import {
   buildAbsoluteUrl,
   isSameDomain,
   normalizeWhitespace,
+  priceParser,
   sanitizeUrl,
 } from './utils.ts';
 
@@ -22,7 +23,7 @@ export class DfImoveisProvider extends PropertyProvider {
 
     console.log(`Collecting links from list page: ${listUrl}\n`);
 
-    $('a[href]').each((_: any, element: any) => {
+    $('a[href]').each((_, element) => {
       const href = $(element).attr('href') ?? '';
       if (!href.includes('/imovel/')) {
         return;
@@ -43,7 +44,7 @@ export class DfImoveisProvider extends PropertyProvider {
       console.log(`Collecting links from list page: ${nextPageUrl}\n`);
 
       const $ = await this.getDocument(nextPageUrl);
-      $('a[href]').each((_: any, element: any) => {
+      $('a[href]').each((_, element) => {
         const href = $(element).attr('href') ?? '';
         if (!href.includes('/imovel/')) {
           return;
@@ -92,7 +93,7 @@ export class DfImoveisProvider extends PropertyProvider {
   }
 
   private extractPrice($: CheerioAPI): string {
-    const price = normalizeWhitespace($('h4.precoAntigoSalao').first().text());
+    const price = priceParser($('p.precoAntigoSalao').first().text());
     return price;
   }
 
