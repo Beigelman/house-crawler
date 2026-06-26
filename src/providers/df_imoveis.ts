@@ -22,7 +22,7 @@ export class DfImoveisProvider extends PropertyProvider {
 
     console.log(`Collecting links from list page: ${listUrl}\n`);
 
-    $('a[href]').each((_, element) => {
+    $('a[href]').each((_: any, element: any) => {
       const href = $(element).attr('href') ?? '';
       if (!href.includes('/imovel/')) {
         return;
@@ -43,7 +43,7 @@ export class DfImoveisProvider extends PropertyProvider {
       console.log(`Collecting links from list page: ${nextPageUrl}\n`);
 
       const $ = await this.getDocument(nextPageUrl);
-      $('a[href]').each((_, element) => {
+      $('a[href]').each((_: any, element: any) => {
         const href = $(element).attr('href') ?? '';
         if (!href.includes('/imovel/')) {
           return;
@@ -82,7 +82,7 @@ export class DfImoveisProvider extends PropertyProvider {
 
   private extractDescription($: CheerioAPI): string {
     const headline = normalizeWhitespace(
-      $('div.imovel-title h2').first().text(),
+      $('div.imovel-title h1.headline-small ').first().text(),
     );
     if (headline) {
       return headline;
