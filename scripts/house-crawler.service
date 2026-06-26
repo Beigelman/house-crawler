@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 User=beigelman
 WorkingDirectory=/home/beigelman/dev/house-crawler
-ExecStart=/home/linuxbrew/.linuxbrew/bin/deno task run
+ExecStart=/home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno task run
 StandardOutput=journal
 StandardError=journal
 

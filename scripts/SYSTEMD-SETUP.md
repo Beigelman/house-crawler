@@ -191,7 +191,7 @@ systemctl status house-crawler.service
 ### Verificar caminho do Deno
 
 ```bash
-# O script usa: /home/linuxbrew/.linuxbrew/bin/deno
+# O script usa: /home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno
 # Verificar se está correto:
 which deno
 
