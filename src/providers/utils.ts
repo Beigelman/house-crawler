@@ -47,6 +47,15 @@ export function buildAbsoluteUrl(base: string, href: string): string {
   return new URL(href, base).toString();
 }
 
+export function buildPageUrl(
+  url: string,
+  page: number,
+  pageParam = 'page',
+): string {
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}${pageParam}=${page}`;
+}
+
 export function sanitizeUrl(url: string): string {
   try {
     const urlObj = new URL(url);

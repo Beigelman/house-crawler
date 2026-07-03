@@ -3,6 +3,7 @@ import type { CheerioAPI } from 'cheerio';
 import { Property, PropertyProvider, SearchParams } from '../types.ts';
 import {
   buildAbsoluteUrl,
+  buildPageUrl,
   isSameDomain,
   normalizeWhitespace,
   priceParser,
@@ -10,6 +11,7 @@ import {
 } from './utils.ts';
 
 export class DfImoveisProvider extends PropertyProvider {
+  private static readonly maxListingPages = 20;
   protected baseUrl: string;
 
   constructor(searchParams: SearchParams) {
@@ -18,10 +20,30 @@ export class DfImoveisProvider extends PropertyProvider {
   }
 
   protected async collectListingLinks(listUrl: string): Promise<string[]> {
-    const $ = await this.getDocument(listUrl);
     const links = new Set<string>();
 
-    console.log(`Collecting links from list page: ${listUrl}\n`);
+    for (let page = 1; page <= DfImoveisProvider.maxListingPages; page++) {
+      const pageUrl = page === 1
+        ? listUrl
+        : buildPageUrl(listUrl, page, 'pagina');
+
+      console.log(`Collecting links from list page: ${pageUrl}\n`);
+
+      const $ = await this.getDocument(pageUrl);
+      const pageLinks = this.extractListingLinks($);
+      const previousTotal = links.size;
+      pageLinks.forEach((link) => links.add(link));
+
+      if (pageLinks.length === 0 || links.size === previousTotal) {
+        break;
+      }
+    }
+
+    return Array.from(links).sort();
+  }
+
+  private extractListingLinks($: CheerioAPI): string[] {
+    const links = new Set<string>();
 
     $('a[href]').each((_, element) => {
       const href = $(element).attr('href') ?? '';
@@ -35,29 +57,7 @@ export class DfImoveisProvider extends PropertyProvider {
       }
     });
 
-    const nextPageSegment = $('ul.pagination');
-    const numberOfPages = nextPageSegment.find('li').length - 2;
-
-    for (let page = 2; page <= numberOfPages; page++) {
-      const nextPageUrl = `${listUrl}&page=${page}`;
-
-      console.log(`Collecting links from list page: ${nextPageUrl}\n`);
-
-      const $ = await this.getDocument(nextPageUrl);
-      $('a[href]').each((_, element) => {
-        const href = $(element).attr('href') ?? '';
-        if (!href.includes('/imovel/')) {
-          return;
-        }
-
-        const absolute = buildAbsoluteUrl(this.baseUrl, href);
-        if (isSameDomain(absolute, 'dfimoveis.com.br')) {
-          links.add(absolute);
-        }
-      });
-    }
-
-    return Array.from(links).sort();
+    return Array.from(links);
   }
 
   protected buildListUrl(
