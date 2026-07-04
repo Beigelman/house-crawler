@@ -52,17 +52,18 @@ export class WimoveisProvider extends PropertyProvider {
       mapLocationToZ[neighborhood]
     ).join(',');
 
-    return `${this.baseUrl}/venda/apartamentos/brasil/desde-${minRoom}-ate-${maxRoom}-quartos/${
-      hasElevator ? 'areac-elevador' : ''
-    }?areaUnit=1&bathroom=${numberOfSuites}&coveredArea=${minArea},${maxArea}&garage=${
-      hasParking ? '1' : '0'
-    }&loc=Z:${loc}&price=${minPrice},${maxPrice}`;
+    return `${this.baseUrl}/venda/apartamentos/brasil/desde-${minRoom}-ate-${maxRoom}-quartos/${hasElevator ? 'areac-elevador' : ''
+      }?areaUnit1&bathroom=${numberOfSuites}&coveredArea=${minArea},${maxArea}${hasParking ? '&garagem=1' : ''
+      }&loc=Z:${loc}&price=${minPrice},${maxPrice}`;
   }
 
   protected async collectListingLinks(listUrl: string): Promise<string[]> {
     const links = new Set<string>();
 
-    for (let page = 1; page <= WimoveisProvider.maxListingPages; page++) {
+    const $ = await this.getDocument(listUrl);
+    const numberOfPages = $('a.paging-module__page-item').length || 1;
+
+    for (let page = 1; page <= numberOfPages; page++) {
       const pageUrl = page === 1 ? listUrl : buildPageUrl(listUrl, page);
 
       console.log(`Collecting links from list page: ${pageUrl}\n`);
@@ -84,7 +85,7 @@ export class WimoveisProvider extends PropertyProvider {
     const links = new Set<string>();
 
     $('div.postingCardLayout-module__posting-card-layout').each(
-      (_, element) => {
+      (_: any, element: any) => {
         const href = $(element).attr('data-to-posting');
         if (!href || !this.isPropertyUrl(href)) {
           return;

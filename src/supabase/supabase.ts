@@ -4,6 +4,18 @@ import { Database } from './database.types.ts';
 
 let supabaseClient: SupabaseClient<Database>;
 
+function uniquePropertiesByLink(properties: Property[]): Property[] {
+  const byLink = new Map<string, Property>();
+
+  for (const property of properties) {
+    if (!byLink.has(property.link)) {
+      byLink.set(property.link, property);
+    }
+  }
+
+  return Array.from(byLink.values());
+}
+
 export function getSupabaseClient(): SupabaseClient<Database> {
   if (supabaseClient) {
     return supabaseClient;
@@ -29,19 +41,29 @@ export async function insertNewProperties(
   properties: Property[],
 ): Promise<Property[]> {
   const client = getSupabaseClient();
+  const uniqueProperties = uniquePropertiesByLink(properties);
+
+  if (uniqueProperties.length === 0) {
+    return [];
+  }
 
   const { data, error } = await client
     .from('real_states')
     .select('link')
-    .in('link', properties.map((property) => property.link));
+    .in('link', uniqueProperties.map((property) => property.link));
 
   if (error) {
     throw new Error(`Erro ao buscar imóveis: ${error.message}`);
   }
 
-  const newProperties = properties.filter((property) =>
-    !data?.some((p) => p.link === property.link)
+  const existingLinks = new Set(data?.map((property) => property.link) ?? []);
+  const newProperties = uniqueProperties.filter((property) =>
+    !existingLinks.has(property.link)
   );
+
+  if (newProperties.length === 0) {
+    return [];
+  }
 
   const { error: insertError } = await client
     .from('real_states')

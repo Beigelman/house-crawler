@@ -60,17 +60,17 @@ if (import.meta.main) {
   const searchParams: SearchParams = {
     neighborhoods: ['asa-norte', 'asa-sul', 'octogonal'],
     numberOfRooms: [3, 4],
-    numberOfSuites: 1,
+    numberOfSuites: 0,
     hasElevator: true,
-    hasParking: true,
-    minArea: 90,
-    maxArea: 160,
-    minPrice: 500000,
+    hasParking: false,
+    minArea: 100,
+    maxArea: 150,
+    minPrice: 100000,
     maxPrice: 1350000,
   };
 
   const dfImoveisProvider = new DfImoveisProvider(searchParams);
   const wimoveisProvider = new WimoveisProvider(searchParams);
 
-  await searchProperties([dfImoveisProvider, wimoveisProvider]);
+  await searchProperties([wimoveisProvider]);
 }

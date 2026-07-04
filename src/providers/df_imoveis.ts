@@ -45,7 +45,7 @@ export class DfImoveisProvider extends PropertyProvider {
   private extractListingLinks($: CheerioAPI): string[] {
     const links = new Set<string>();
 
-    $('a[href]').each((_, element) => {
+    $('a[href]').each((_: any, element: any) => {
       const href = $(element).attr('href') ?? '';
       if (!href.includes('/imovel/')) {
         return;
@@ -76,9 +76,9 @@ export class DfImoveisProvider extends PropertyProvider {
       neighborhoods.join(',')
     }/imoveis/${
       numberOfRooms.join(',')
-    }-quartos?suites=${numberOfSuites}&vagasdegaragem=${
-      hasParking ? '1' : '0'
-    }&valorinicial=${minPrice}&valorfinal=${maxPrice}&areainicial=${minArea}&areafinal=${maxArea}`;
+    }-quartos?valorinicial=${minPrice}&valorfinal=${maxPrice}&areainicial=${minArea}&areafinal=${maxArea}${
+      numberOfSuites > 0 ? `&suites=${numberOfSuites}` : ''
+    }${hasParking ? '&vagasdegaragem=1' : ''}`;
   }
 
   private extractDescription($: CheerioAPI): string {
