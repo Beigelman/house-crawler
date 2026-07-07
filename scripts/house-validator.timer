@@ -1,10 +1,14 @@
 [Unit]
-Description=Executa House Validator semanalmente às segundas-feiras às 08h
+Description=Executa House Validator às 00h, 08h e 16h diariamente
 Requires=house-validator.service
 
 [Timer]
-# Executa toda segunda-feira às 08:00
-OnCalendar=Mon *-*-* 08:00:00
+# Executa às 00:00
+OnCalendar=*-*-* 00:00:00
+# Executa às 08:00
+OnCalendar=*-*-* 08:00:00
+# Executa às 16:00
+OnCalendar=*-*-* 16:00:00
 
 # Se o sistema estiver desligado no horário agendado, executa ao ligar
 Persistent=true
@@ -14,5 +18,4 @@ RandomizedDelaySec=300
 
 [Install]
 WantedBy=timers.target
-
 

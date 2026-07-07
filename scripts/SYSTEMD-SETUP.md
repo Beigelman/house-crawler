@@ -1,12 +1,17 @@
 # Configuração do systemd Timer
 
 Este documento explica como usar o systemd timer para executar o crawler
-automaticamente às **06h e 18h** todos os dias.
+automaticamente às **06h, 14h e 22h** todos os dias, e o validador às
+**00h, 08h e 16h** todos os dias.
 
 ## 📋 Arquivos criados
 
-- `house-crawler.service` - Define o serviço que executa o crawler
-- `house-crawler.timer` - Define os horários de execução (06h e 18h)
+- `house-crawler.service` - Define o serviço que executa o crawler via script
+- `house-crawler.timer` - Define os horários de execução (06h, 14h e 22h)
+- `run-house-crawler.sh` - Executa o crawler com pings de start, sucesso e falha para Healthchecks.io
+- `house-validator.service` - Define o serviço que executa o validador via script
+- `house-validator.timer` - Define os horários de execução (00h, 08h e 16h)
+- `run-house-validator.sh` - Executa o validador com pings de start, sucesso e falha para Healthchecks.io
 - `install-systemd.sh` - Script para instalar e configurar automaticamente
 
 ## 🚀 Instalação Rápida
@@ -16,7 +21,8 @@ automaticamente às **06h e 18h** todos os dias.
 ./install-systemd.sh
 ```
 
-Pronto! O crawler agora rodará automaticamente às 06h e 18h todos os dias.
+Pronto! O crawler agora rodará automaticamente às 06h, 14h e 22h todos os dias,
+e o validador às 00h, 08h e 16h todos os dias.
 
 ## 🔧 Instalação Manual
 
@@ -26,18 +32,23 @@ Se preferir instalar manualmente:
 # 1. Copiar arquivos para /etc/systemd/system/
 sudo cp house-crawler.service /etc/systemd/system/
 sudo cp house-crawler.timer /etc/systemd/system/
+sudo cp house-validator.service /etc/systemd/system/
+sudo cp house-validator.timer /etc/systemd/system/
 
 # 2. Recarregar systemd
 sudo systemctl daemon-reload
 
-# 3. Habilitar o timer
+# 3. Habilitar os timers
 sudo systemctl enable house-crawler.timer
+sudo systemctl enable house-validator.timer
 
-# 4. Iniciar o timer
+# 4. Iniciar os timers
 sudo systemctl start house-crawler.timer
+sudo systemctl start house-validator.timer
 
 # 5. Verificar status
 systemctl status house-crawler.timer
+systemctl status house-validator.timer
 ```
 
 ## 📊 Comandos Úteis
@@ -51,7 +62,7 @@ systemctl status house-crawler.timer
 ### Ver próximas execuções agendadas
 
 ```bash
-systemctl list-timers house-crawler.timer
+systemctl list-timers house-crawler.timer house-validator.timer
 ```
 
 ### Ver logs em tempo real
@@ -89,7 +100,22 @@ sudo systemctl disable house-crawler.timer
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl restart house-crawler.timer
+sudo systemctl restart house-validator.timer
 ```
+
+### Alterar Healthchecks.io
+
+Os scripts enviam ping para Healthchecks.io no início, sucesso e falha:
+
+```bash
+https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e/start
+https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e
+https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e/fail
+```
+
+Se a URL mudar, edite `run-house-crawler.sh` e `run-house-validator.sh`. Falhas
+temporárias no ping são ignoradas para preservar o status real do crawler ou
+validador.
 
 ## ⚙️ Personalizações
 
@@ -149,11 +175,12 @@ sudo systemctl daemon-reload
 
 ```bash
 # Ver próximas execuções
-systemctl list-timers house-crawler.timer
+systemctl list-timers house-crawler.timer house-validator.timer
 
 # Deve mostrar algo como:
 # NEXT                        LEFT       LAST PASSED UNIT                   ACTIVATES
-# Thu 2025-10-16 18:00:00 -03 5h left    n/a  n/a    house-crawler.timer    house-crawler.service
+# Thu 2025-10-16 14:00:00 -03 2h left    n/a  n/a    house-crawler.timer    house-crawler.service
+# Thu 2025-10-16 16:00:00 -03 4h left    n/a  n/a    house-validator.timer  house-validator.service
 ```
 
 ## 🐛 Troubleshooting
@@ -191,11 +218,11 @@ systemctl status house-crawler.service
 ### Verificar caminho do Deno
 
 ```bash
-# O script usa: /home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno
+# Os scripts usam: /home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno
 # Verificar se está correto:
 which deno
 
-# Se diferente, edite house-crawler.service e ajuste o ExecStart
+# Se diferente, edite run-house-crawler.sh e run-house-validator.sh
 ```
 
 ## 📝 Notas

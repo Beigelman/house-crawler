@@ -22,6 +22,11 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "📁 Diretório do projeto: $PROJECT_DIR"
 
+# Garantir que os wrappers usados pelo systemd sejam executáveis
+echo "🔧 Ajustando permissões dos scripts..."
+chmod +x "$PROJECT_DIR/run-house-crawler.sh"
+chmod +x "$PROJECT_DIR/run-house-validator.sh"
+
 # Copiar arquivos para /etc/systemd/system/
 echo "📋 Copiando arquivos de serviço para /etc/systemd/system/..."
 sudo cp "$PROJECT_DIR/house-crawler.service" /etc/systemd/system/
@@ -73,4 +78,3 @@ echo "  Desabilitar:       sudo systemctl disable house-validator.timer"
 echo "  Executar agora:    sudo systemctl start house-validator.service"
 echo ""
 echo "  Ver próximas runs: systemctl list-timers"
-

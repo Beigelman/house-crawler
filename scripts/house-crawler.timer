@@ -1,12 +1,14 @@
 [Unit]
-Description=Executa House Crawler às 06h e 18h diariamente
+Description=Executa House Crawler às 06h, 14h e 22h diariamente
 Requires=house-crawler.service
 
 [Timer]
 # Executa às 06:00
 OnCalendar=*-*-* 06:00:00
-# Executa às 18:00
-OnCalendar=*-*-* 18:00:00
+# Executa às 14:00
+OnCalendar=*-*-* 14:00:00
+# Executa às 22:00
+OnCalendar=*-*-* 22:00:00
 
 # Se o sistema estiver desligado no horário agendado, executa ao ligar
 Persistent=true
@@ -16,4 +18,3 @@ RandomizedDelaySec=300
 
 [Install]
 WantedBy=timers.target
-

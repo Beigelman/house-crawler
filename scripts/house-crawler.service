@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 User=beigelman
 WorkingDirectory=/home/beigelman/dev/house-crawler
-ExecStart=/home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno task run
+ExecStart=/home/beigelman/dev/house-crawler/scripts/run-house-crawler.sh
 StandardOutput=journal
 StandardError=journal
 
@@ -19,4 +19,3 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-
