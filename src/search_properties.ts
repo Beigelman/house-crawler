@@ -63,10 +63,10 @@ if (import.meta.main) {
     numberOfSuites: 0,
     hasElevator: true,
     hasParking: false,
-    minArea: 100,
+    minArea: 90,
     maxArea: 150,
-    minPrice: 100000,
-    maxPrice: 1350000,
+    minPrice: 1000000,
+    maxPrice: 1400000,
   };
 
   const dfImoveisProvider = new DfImoveisProvider(searchParams);
