@@ -72,5 +72,5 @@ if (import.meta.main) {
   const dfImoveisProvider = new DfImoveisProvider(searchParams);
   const wimoveisProvider = new WimoveisProvider(searchParams);
 
-  await searchProperties([wimoveisProvider]);
+  await searchProperties([wimoveisProvider, dfImoveisProvider]);
 }
