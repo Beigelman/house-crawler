@@ -4,6 +4,10 @@ import { Database } from './database.types.ts';
 
 let supabaseClient: SupabaseClient<Database>;
 
+// PostgREST serializes `in` filters into the request URL. Keep each filter well
+// below common proxy URL limits, accounting for URL encoding of every link.
+const MAX_IN_FILTER_ENCODED_LENGTH = 6_000;
+
 function uniquePropertiesByLink(properties: Property[]): Property[] {
   const byLink = new Map<string, Property>();
 
@@ -14,6 +18,34 @@ function uniquePropertiesByLink(properties: Property[]): Property[] {
   }
 
   return Array.from(byLink.values());
+}
+
+function chunkLinksForFilter(links: string[]): string[][] {
+  const chunks: string[][] = [];
+  let currentChunk: string[] = [];
+  let currentLength = 0;
+
+  for (const link of links) {
+    const encodedLength = encodeURIComponent(link).length + 1;
+
+    if (
+      currentChunk.length > 0 &&
+      currentLength + encodedLength > MAX_IN_FILTER_ENCODED_LENGTH
+    ) {
+      chunks.push(currentChunk);
+      currentChunk = [];
+      currentLength = 0;
+    }
+
+    currentChunk.push(link);
+    currentLength += encodedLength;
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
 }
 
 export function getSupabaseClient(): SupabaseClient<Database> {
@@ -47,16 +79,26 @@ export async function insertNewProperties(
     return [];
   }
 
-  const { data, error } = await client
-    .from('real_states')
-    .select('link')
-    .in('link', uniqueProperties.map((property) => property.link));
+  const existingLinks = new Set<string>();
+  const linkChunks = chunkLinksForFilter(
+    uniqueProperties.map((property) => property.link),
+  );
 
-  if (error) {
-    throw new Error(`Erro ao buscar imóveis: ${error.message}`);
+  for (const links of linkChunks) {
+    const { data, error } = await client
+      .from('real_states')
+      .select('link')
+      .in('link', links);
+
+    if (error) {
+      throw new Error(`Erro ao buscar imóveis: ${error.message}`);
+    }
+
+    for (const property of data ?? []) {
+      existingLinks.add(property.link);
+    }
   }
 
-  const existingLinks = new Set(data?.map((property) => property.link) ?? []);
   const newProperties = uniqueProperties.filter((property) =>
     !existingLinks.has(property.link)
   );
