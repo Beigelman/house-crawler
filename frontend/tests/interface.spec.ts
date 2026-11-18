@@ -961,7 +961,7 @@ async function localWorker() {
     'run',
     '-A',
     '--config=' + root + 'deno.json',
-    '--preload=' + root + 'tests/cli_preload.ts',
+    '--preload=' + root + 'tests/support/cli_preload.ts',
     root + 'backend/src/worker.ts',
   ], { cwd, env: { ...process.env, PROPERTY_TEST_MODE: 'success' } });
   let output = '';

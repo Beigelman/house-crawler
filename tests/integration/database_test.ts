@@ -11,7 +11,7 @@ import {
   save,
   sql,
   token,
-} from './local.ts';
+} from '../support/local.ts';
 const test = (name: string, fn: () => Promise<void>) =>
   Deno.test({
     name,
@@ -362,7 +362,7 @@ Deno.test({
     const results = await Promise.all(
       ['collect', 'validate', 'worker'].map((kind) =>
         new Deno.Command('rtk', {
-          args: ['deno', 'run', '-A', 'tests/contender.ts', kind],
+          args: ['deno', 'run', '-A', 'tests/support/contender.ts', kind],
           stdout: 'piped',
           stderr: 'piped',
         }).output()
@@ -801,7 +801,7 @@ for (const code of ['AC58', 'AC59']) {
     sanitizeResources: false,
     sanitizeOps: false,
     fn: async () => {
-      const { browserProof } = await import('./browser_proof.ts');
+      const { browserProof } = await import('../support/browser_proof.ts');
       await browserProof(code);
     },
   });
@@ -821,7 +821,9 @@ for (
     sanitizeResources: false,
     sanitizeOps: false,
     fn: async () => {
-      const { validationCase } = await import('./provider_boundary.ts');
+      const { validationCase } = await import(
+        '../support/provider_boundary.ts'
+      );
       for (const mode of modes) await validationCase(mode);
     },
   });

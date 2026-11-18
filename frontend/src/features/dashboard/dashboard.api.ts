@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { check } from '../../lib/query-result';
+
 export async function dashboard() {
   const count = async (column?: string, value?: string, since?: string) => {
     let q = supabase.from('real_states').select('link', {

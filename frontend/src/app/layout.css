@@ -1,0 +1,185 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+aside {
+  width: 220px;
+  padding: 30px 20px;
+  background: #fdfdf9;
+  border-right: 1px solid #e2e7df;
+  position: fixed;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  font-size: 23px;
+  color: #1c4e3b;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+
+aside > .eyebrow {
+  margin: 18px 0 35px;
+  font-size: 8px;
+}
+
+nav {
+  display: grid;
+  gap: 7px;
+}
+
+nav a {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  color: #718075;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+nav a span {
+  font-size: 20px;
+}
+
+nav a.active {
+  background: #e8efe5;
+  color: #215d40;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  font-size: 12px;
+  color: #5c7564;
+}
+
+.sidebar-bottom small {
+  margin-left: 13px;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #62956c;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+
+.workspace {
+  margin-left: 220px;
+  flex: 1;
+  min-width: 0;
+}
+
+header {
+  height: 83px;
+  padding: 0 42px;
+  border-bottom: 1px solid #e3e7de;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fdfdf9;
+}
+
+header > span {
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  color: #829184;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+header button {
+  font-size: 12px;
+}
+
+footer {
+  margin: 25px 42px;
+  padding: 20px 0;
+  border-top: 1px solid #e2e7dd;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #9aa596;
+}
+
+footer span {
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  header {
+    padding: 0 25px;
+  }
+}
+
+@media (max-width: 760px) {
+  aside {
+    position: static;
+    width: auto;
+    padding: 15px 18px;
+    border-right: 0;
+    border-bottom: 1px solid #e0e6db;
+  }
+  aside .eyebrow, .sidebar-bottom {
+    display: none;
+  }
+  .shell {
+    display: block;
+  }
+  .brand {
+    font-size: 20px;
+  }
+  nav {
+    display: flex;
+    gap: 2px;
+    margin-top: 14px;
+    justify-content: space-between;
+  }
+  nav a {
+    font-size: 11px;
+    padding: 7px 9px;
+    gap: 5px;
+  }
+  nav a span {
+    display: none;
+  }
+  .workspace {
+    margin-left: 0;
+  }
+  header {
+    height: 66px;
+    padding: 0 18px;
+  }
+  header > span {
+    font-size: 8px;
+    letter-spacing: 0.8px;
+  }
+  .header-actions {
+    gap: 3px;
+  }
+  header button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  footer {
+    margin: 15px 18px;
+    font-size: 8px;
+  }
+}

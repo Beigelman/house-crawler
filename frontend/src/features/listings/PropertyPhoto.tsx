@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 export function PropertyPhoto({ url }: { url: string | null | undefined }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [url]);

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { admin, begin, item, owner, reset, rpc, save, sql } from './local.ts';
-import { propertyStore } from '../backend/src/property/persistence/supabase-property-store.ts';
-import { executeRun } from '../backend/src/property/application/execute-run.ts';
-import { DfImoveisProvider } from '../backend/src/property/providers/df-imoveis.ts';
-import { WimoveisProvider } from '../backend/src/property/providers/wimoveis.ts';
+import { propertyStore } from '../../backend/src/property/persistence/supabase-property-store.ts';
+import { executeRun } from '../../backend/src/property/application/execute-run.ts';
+import { DfImoveisProvider } from '../../backend/src/property/providers/df-imoveis.ts';
+import { WimoveisProvider } from '../../backend/src/property/providers/wimoveis.ts';
 export async function validationCase(
   mode: '404' | '410' | 'removed' | '403' | 'timeout' | 'network' | 'parse',
 ) {

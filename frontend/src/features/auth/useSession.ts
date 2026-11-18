@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { getSession, onAuthStateChange } from './auth.api';
+
 export function useSession() {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);

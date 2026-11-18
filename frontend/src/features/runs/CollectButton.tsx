@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { enqueueCollection } from './runs.api';
+
 export function CollectButton() {
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
@@ -15,15 +16,18 @@ export function CollectButton() {
         onClick={async () => {
           setPending(true);
           try {
-            const r = await enqueueCollection(key.current);
+            const requestResult = await enqueueCollection(key.current);
             setMessage(
-              r.outcome === 'rate_limited'
-                ? `Aguarde ${r.retry_after_seconds}s`
-                : r.outcome === 'busy'
+              requestResult.outcome === 'rate_limited'
+                ? `Aguarde ${requestResult.retry_after_seconds}s`
+                : requestResult.outcome === 'busy'
                 ? 'Já existe uma coleta pendente'
                 : 'Coleta solicitada',
             );
-            if (r.outcome === 'accepted' || r.outcome === 'replayed') {
+            if (
+              requestResult.outcome === 'accepted' ||
+              requestResult.outcome === 'replayed'
+            ) {
               key
                 .current = crypto.randomUUID();
             }

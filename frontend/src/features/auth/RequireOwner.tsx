@@ -7,6 +7,7 @@ import { ErrorState } from '../../components/ErrorState';
 import { useSession } from './useSession';
 import { isOwner, signOut } from './auth.api';
 import { LoginPage } from './LoginPage';
+
 export function RequireOwner({ children }: { children: ReactNode }) {
   const { session, ready } = useSession();
   const [denied, setDenied] = useState(false);

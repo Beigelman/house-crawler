@@ -6,6 +6,7 @@ import { useListingDetail } from './listings.queries';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { PageHeading } from '../../components/PageHeading';
+
 export function ListingDetailPage() {
   const { encodedLink = '' } = useParams();
   const link = encodedLink;

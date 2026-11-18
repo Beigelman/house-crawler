@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { sendLoginLink } from './auth.api';
+
 export function LoginPage(
   { session, denied }: { session: Session | null; denied: boolean },
 ) {

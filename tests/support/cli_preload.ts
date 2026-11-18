@@ -18,7 +18,7 @@ const mode = Deno.env.get('PROPERTY_TEST_MODE') || 'success';
 if (mode === 'scheduled') Deno.env.delete('WORKER_SCHEDULE_ENABLED');
 else Deno.env.set('WORKER_SCHEDULE_ENABLED', 'false');
 const detail = await Deno.readTextFile(
-  new URL('fixtures/wimoveis.html', import.meta.url),
+  new URL('../fixtures/wimoveis.html', import.meta.url),
 );
 const original = globalThis.fetch;
 globalThis.fetch = (input, init) => {

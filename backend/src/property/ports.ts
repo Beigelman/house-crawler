@@ -1,10 +1,12 @@
 import type { Profile, Property } from '../../../shared/property.ts';
+
 export type Run = {
   run_id: string;
   token: number;
   kind: string;
   profiles: Profile[];
 };
+
 export interface Store {
   activeRunId?(): Promise<string | null>;
   schedule?(): Promise<{ outcome: string; scheduled_at?: string }>;
@@ -29,12 +31,14 @@ export interface Store {
   listings(): Promise<Property[]>;
   heartbeat(): Promise<unknown>;
 }
+
 export interface Provider {
   collect(): Promise<
     { properties: Property[]; outcome: string; error: string | null }
   >;
   verify(url: string): Promise<{ verification: string }>;
 }
+
 export type Dependencies = {
   schedule?: Store['schedule'];
   sleep?: (ms: number) => Promise<void>;

@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
+
 const fields = [
   ['q', 'Buscar por título', 'text'],
   ['source', 'Fonte', 'source'],
@@ -13,6 +14,7 @@ const fields = [
   ['mark', 'Minha seleção', 'mark'],
   ['sort', 'Ordenar', 'sort'],
 ] as const;
+
 const options: Record<string, [string, string][]> = {
   source: [['wimoveis', 'Wimoveis'], ['dfimoveis', 'DF Imóveis']],
   neighborhood: [['asa-norte', 'Asa Norte'], ['asa-sul', 'Asa Sul'], [

@@ -1,3 +1,5 @@
+> Material histórico anterior à interface e ao worker. Não execute o SQL de setup desta pasta; ele contém policies antigas. Use [o guia atual](../property-interface.md) e as migrations em `backend/supabase/migrations/`.
+
 > Configuração atual: [guia da interface privada](../../docs/property-interface.md). O bootstrap antigo está desabilitado; use a migração e a credencial de servidor. As instruções históricas abaixo não autorizam policies públicas.
 
 make# Configuração do Banco de Dados Supabase

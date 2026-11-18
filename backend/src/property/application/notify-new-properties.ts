@@ -1,5 +1,6 @@
 import type { Dependencies, Run } from '../ports.ts';
 import type { Property } from '../../../../shared/property.ts';
+
 export async function notifyNewProperties(
   run: Run,
   items: Property[],

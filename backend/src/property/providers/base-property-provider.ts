@@ -6,6 +6,7 @@ import type { Property, SearchParams } from '../../../../shared/property.ts';
 import { parsePropertyHtml } from './parse-property-html.ts';
 import { fetchWithRetry, HttpError } from '../../platform/http-client.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
+
 export interface ProviderConfig {
   name: string;
   baseUrl: string;

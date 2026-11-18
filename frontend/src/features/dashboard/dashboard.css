@@ -1,0 +1,82 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 28px 0;
+}
+
+.stats article {
+  background: #fff;
+  border: 1px solid #e0e6dc;
+  border-radius: 12px;
+  padding: 22px 25px;
+}
+
+.stats article > span {
+  font-size: 12px;
+  color: #738074;
+}
+
+.stats strong {
+  display: block;
+  font-size: 40px;
+  letter-spacing: -1.5px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.stats strong.status-text {
+  font-size: 29px;
+  line-height: 1.9;
+  letter-spacing: -0.7px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+}
+
+.welcome {
+  background: #e5eddf;
+  padding: 30px;
+}
+
+.welcome h2 {
+  font-size: 28px;
+  margin: 18px 0;
+  letter-spacing: -0.6px;
+}
+
+.welcome p {
+  max-width: 300px;
+}
+
+.welcome .button {
+  margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .stats {
+    gap: 8px;
+  }
+  .stats article {
+    padding: 13px 10px;
+  }
+  .stats article > span {
+    font-size: 10px;
+  }
+  .stats strong {
+    font-size: 30px;
+  }
+  .stats strong.status-text {
+    font-size: 20px;
+    line-height: 2.1;
+  }
+  .stats small {
+    font-size: 9px;
+  }
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

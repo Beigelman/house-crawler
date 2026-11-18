@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { check } from '../../lib/query-result';
 import { profiles } from '../searches/searches.api';
+
 export async function getRuns() {
   return ({
     runs: check(

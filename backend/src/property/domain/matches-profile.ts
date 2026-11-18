@@ -1,5 +1,6 @@
 import type { Property, SearchParams } from '../../../../shared/property.ts';
 import { toCentavos } from '../../../../shared/money.ts';
+
 export function matchesProfile(p: Property, s: SearchParams): boolean {
   return p.neighborhood != null && s.neighborhoods.includes(p.neighborhood) &&
     p.rooms != null && s.numberOfRooms.includes(p.rooms) && p.area != null &&

@@ -9,6 +9,7 @@ export type SearchParams = {
   hasElevator: boolean;
   hasParking: boolean;
 };
+
 export type Property = {
   titulo: string;
   valor: string;
@@ -24,6 +25,7 @@ export type Property = {
   photo?: string | null;
   verification?: string;
 };
+
 export type Listing = Property & {
   created_at: string;
   last_seen_at: string | null;
@@ -36,6 +38,7 @@ export type Listing = Property & {
   comparison_at: string | null;
   price_cents: number | null;
 };
+
 export type Profile = {
   id: string;
   name: string;

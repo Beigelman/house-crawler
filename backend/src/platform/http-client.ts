@@ -1,4 +1,5 @@
 export const REQUEST_TIMEOUT_MS = 30000;
+
 export class HttpError extends Error {
   constructor(public status: number) {
     super('HTTP ' + status);
@@ -11,6 +12,7 @@ type Options = {
   signal?: AbortSignal;
   headers?: HeadersInit;
 };
+
 export async function fetchWithRetry(
   url: string,
   options: Options = {},

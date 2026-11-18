@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { CollectButton } from '../features/runs/CollectButton';
 import { signOut } from '../features/auth/auth.api';
+
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className='shell'>

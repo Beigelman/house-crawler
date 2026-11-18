@@ -1,0 +1,76 @@
+.login {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+  min-height: 100vh;
+  max-width: none;
+  background: #fdfdf9;
+}
+
+.login-story {
+  background: #163f32;
+  color: #f1f3e9;
+  padding: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.login-story h1 {
+  font-size: 50px;
+  margin: 30px 0;
+}
+
+.login-story p {
+  color: #bbcbb8;
+  font-size: 17px;
+}
+
+.login-story .eyebrow {
+  color: #afc3a6;
+}
+
+.house-art {
+  font-size: 160px;
+  color: #7d9e6c;
+  line-height: 1;
+  margin: 30px 0;
+}
+
+.login-form {
+  max-width: 430px;
+  width: 100%;
+  align-self: center;
+  justify-self: center;
+  padding: 40px;
+}
+
+.login-form .brand {
+  margin-bottom: 50px;
+}
+
+.login-form h2 {
+  font-size: 25px;
+}
+
+.login-form form {
+  margin: 25px 0;
+}
+
+.login-form button {
+  width: 100%;
+  margin-top: 20px;
+}
+
+@media (max-width: 760px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+  .login-story {
+    display: none;
+  }
+  .login-form {
+    padding: 35px 25px;
+  }
+}

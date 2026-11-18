@@ -4,6 +4,7 @@ import { ListingsPage } from '../features/listings/ListingsPage';
 import { ListingDetailPage } from '../features/listings/ListingDetailPage';
 import { SearchesPage } from '../features/searches/SearchesPage';
 import { RunsPage } from '../features/runs/RunsPage';
+
 export function AppRoutes() {
   return (
     <Routes>

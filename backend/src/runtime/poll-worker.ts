@@ -1,6 +1,7 @@
 import type { Dependencies } from '../property/ports.ts';
 import { executeRun } from '../property/application/execute-run.ts';
 import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
+
 export async function pollWorker(
   deps: Dependencies & {
     sleep?: (ms: number) => Promise<void>;

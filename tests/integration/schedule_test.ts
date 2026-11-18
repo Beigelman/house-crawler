@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import * as local from './local.ts';
-import { propertyStore } from '../backend/src/property/persistence/supabase-property-store.ts';
-import { pollWorker } from '../backend/src/runtime/poll-worker.ts';
+import * as local from '../support/local.ts';
+import { propertyStore } from '../../backend/src/property/persistence/supabase-property-store.ts';
+import { pollWorker } from '../../backend/src/runtime/poll-worker.ts';
 
 Deno.test('SCHED-01 Brasília slots include exact boundaries and midnight catch-up', async () => {
   const cases = [
@@ -130,14 +130,14 @@ globalThis.addEventListener('unload', () => void local.sql.end());
 
 Deno.test('SCHED-05/07 actual worker CLI schedules by default with no manual request', async () => {
   await local.reset();
-  const root = new URL('..', import.meta.url).pathname;
+  const root = new URL('../..', import.meta.url).pathname;
   const cwd = await Deno.makeTempDir({ prefix: 'scheduled-worker-' });
   const worker = new Deno.Command(Deno.execPath(), {
     args: [
       'run',
       '-A',
       '--config=' + root + 'deno.json',
-      '--preload=' + root + 'tests/cli_preload.ts',
+      '--preload=' + root + 'tests/support/cli_preload.ts',
       root + 'backend/src/worker.ts',
     ],
     cwd,

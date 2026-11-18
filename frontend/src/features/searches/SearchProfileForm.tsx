@@ -1,14 +1,30 @@
 import { useState } from 'react';
 import type { Profile } from '../../../../shared/property.ts';
 import { saveProfile } from './searches.api';
+
+const numericFields = [
+  ['numberOfSuites', 'Suítes mínimas'],
+  ['minArea', 'Área mínima'],
+  ['maxArea', 'Área máxima'],
+  ['minPrice', 'Preço mínimo'],
+  ['maxPrice', 'Preço máximo'],
+] as const;
+
+const amenityFields = [['hasElevator', 'Exigir elevador'], [
+  'hasParking',
+  'Exigir vaga',
+]] as const;
+
 export function SearchProfileForm(
   { initial, saved }: { initial: Profile; saved: () => void },
 ) {
-  const [p, setP] = useState(initial);
-  const [message, setMessage] = useState(''),
-    [pending, setPending] = useState(false);
-  const set = (key: string, value: unknown) =>
-    setP({ ...p, params: { ...p.params, [key]: value } });
+  const [profile, setProfile] = useState(initial);
+  const [message, setMessage] = useState('');
+  const [pending, setPending] = useState(false);
+  const setParam = <Key extends keyof Profile['params']>(
+    key: Key,
+    value: Profile['params'][Key],
+  ) => setProfile({ ...profile, params: { ...profile.params, [key]: value } });
   return (
     <form
       className='panel profile'
@@ -16,7 +32,7 @@ export function SearchProfileForm(
         e.preventDefault();
         setPending(true);
         try {
-          await saveProfile(p);
+          await saveProfile(profile);
           setMessage('Busca salva');
           saved();
         } catch {
@@ -33,17 +49,17 @@ export function SearchProfileForm(
           Nome da busca<input
             required
             maxLength={80}
-            value={p.name}
-            onChange={(e) => setP({ ...p, name: e.target.value })}
+            value={profile.name}
+            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
           />
         </label>
         <label>
           Bairros<input
             required
             aria-label='Bairros'
-            value={p.params.neighborhoods.join(',')}
+            value={profile.params.neighborhoods.join(',')}
             onChange={(e) =>
-              set(
+              setParam(
                 'neighborhoods',
                 e.target.value.split(',').map((x) => x.trim()),
               )}
@@ -53,41 +69,39 @@ export function SearchProfileForm(
         <label>
           Quartos<input
             required
-            value={p.params.numberOfRooms.join(',')}
+            value={profile.params.numberOfRooms.join(',')}
             onChange={(e) =>
-              set('numberOfRooms', e.target.value.split(',').map(Number))}
+              setParam('numberOfRooms', e.target.value.split(',').map(Number))}
           />
         </label>
-        {[
-          ['numberOfSuites', 'Suítes mínimas'],
-          ['minArea', 'Área mínima'],
-          ['maxArea', 'Área máxima'],
-          ['minPrice', 'Preço mínimo'],
-          ['maxPrice', 'Preço máximo'],
-        ].map(([k, l]) => (
-          <label key={k}>
-            {l}
+        {numericFields.map(([key, label]) => (
+          <label key={key}>
+            {label}
             <input
               type='number'
               required
               min={0}
-              step={k === 'numberOfSuites' ? 1 : 'any'}
-              value={p.params[k as keyof typeof p.params] as number}
-              onChange={(e) => set(k, Number(e.target.value))}
+              step={key === 'numberOfSuites' ? 1 : 'any'}
+              value={profile.params[key]}
+              onChange={(e) =>
+                setParam(
+                  key,
+                  Number(e.target.value),
+                )}
             />
           </label>
         ))}
       </div>
       <div className='toggles'>
-        {[['hasElevator', 'Exigir elevador'], ['hasParking', 'Exigir vaga']]
-          .map(([k, l]) => (
-            <label key={k}>
+        {amenityFields
+          .map(([key, label]) => (
+            <label key={key}>
               <input
                 type='checkbox'
-                checked={Boolean(p.params[k as keyof typeof p.params])}
-                onChange={(e) => set(k, e.target.checked)}
+                checked={profile.params[key]}
+                onChange={(e) => setParam(key, e.target.checked)}
               />
-              {l}
+              {label}
             </label>
           ))}
         {[['dfimoveis', 'DF Imóveis'], ['wimoveis', 'Wimoveis']].map((
@@ -96,13 +110,13 @@ export function SearchProfileForm(
           <label key={v}>
             <input
               type='checkbox'
-              checked={p.providers.includes(v)}
+              checked={profile.providers.includes(v)}
               onChange={(e) =>
-                setP({
-                  ...p,
+                setProfile({
+                  ...profile,
                   providers: e.target.checked
-                    ? [...p.providers, v]
-                    : p.providers.filter((x) => x !== v),
+                    ? [...profile.providers, v]
+                    : profile.providers.filter((x) => x !== v),
                 })}
             />
             {l}
@@ -111,8 +125,9 @@ export function SearchProfileForm(
         <label>
           <input
             type='checkbox'
-            checked={p.enabled}
-            onChange={(e) => setP({ ...p, enabled: e.target.checked })}
+            checked={profile.enabled}
+            onChange={(e) =>
+              setProfile({ ...profile, enabled: e.target.checked })}
           />Busca ativa
         </label>
       </div>

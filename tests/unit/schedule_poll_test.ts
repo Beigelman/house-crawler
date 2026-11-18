@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { pollWorker } from '../backend/src/runtime/poll-worker.ts';
-import { type Store } from '../backend/src/property/ports.ts';
+import { pollWorker } from '../../backend/src/runtime/poll-worker.ts';
+import { type Store } from '../../backend/src/property/ports.ts';
 
 for (const schedulerFails of [false, true]) {
   Deno.test(`SCHED-05 polling schedules before claim and handles scheduler failure=${schedulerFails}`, async () => {

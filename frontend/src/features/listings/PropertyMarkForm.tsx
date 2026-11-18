@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { savePropertyMark } from './listings.api';
+
 export function PropertyMarkForm(
   { link, value, onSave }: {
     link: string;
@@ -8,8 +9,8 @@ export function PropertyMarkForm(
   },
 ) {
   const [status, setStatus] = useState(value?.status || '');
-  const [note, setNote] = useState(value?.note || ''),
-    [message, setMessage] = useState('');
+  const [note, setNote] = useState(value?.note || '');
+  const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
   useEffect(() => {
     setStatus(value?.status || '');
