@@ -1,21 +1,15 @@
+import { parsePropertyHtml } from '../property/parsing.ts';
 import type { CheerioAPI } from 'cheerio';
 
 import { Property, PropertyProvider, SearchParams } from '../types.ts';
-import {
-  buildAbsoluteUrl,
-  buildPageUrl,
-  isSameDomain,
-  normalizeWhitespace,
-  priceParser,
-  sanitizeUrl,
-} from './utils.ts';
+import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './utils.ts';
 
 export class WimoveisProvider extends PropertyProvider {
   private static readonly maxListingPages = 5;
   protected baseUrl: string;
 
-  constructor(searchParams: SearchParams) {
-    super('Wimoveis', searchParams);
+  constructor(searchParams: SearchParams, signal?: AbortSignal) {
+    super('Wimoveis', searchParams, signal);
     this.baseUrl = 'https://www.wimoveis.com.br';
   }
 
@@ -52,9 +46,11 @@ export class WimoveisProvider extends PropertyProvider {
       mapLocationToZ[neighborhood]
     ).join(',');
 
-    return `${this.baseUrl}/venda/apartamentos/brasil/desde-${minRoom}-ate-${maxRoom}-quartos/${hasElevator ? 'areac-elevador' : ''
-      }?areaUnit1&bathroom=${numberOfSuites}&coveredArea=${minArea},${maxArea}${hasParking ? '&garagem=1' : ''
-      }&loc=Z:${loc}&price=${minPrice},${maxPrice}`;
+    return `${this.baseUrl}/venda/apartamentos/brasil/desde-${minRoom}-ate-${maxRoom}-quartos/${
+      hasElevator ? 'areac-elevador' : ''
+    }?areaUnit1&bathroom=${numberOfSuites}&coveredArea=${minArea},${maxArea}${
+      hasParking ? '&garagem=1' : ''
+    }&loc=Z:${loc}&price=${minPrice},${maxPrice}`;
   }
 
   protected async collectListingLinks(listUrl: string): Promise<string[]> {
@@ -85,7 +81,7 @@ export class WimoveisProvider extends PropertyProvider {
     const links = new Set<string>();
 
     $('div.postingCardLayout-module__posting-card-layout').each(
-      (_: any, element: any) => {
+      (_, element) => {
         const href = $(element).attr('data-to-posting');
         if (!href || !this.isPropertyUrl(href)) {
           return;
@@ -101,44 +97,12 @@ export class WimoveisProvider extends PropertyProvider {
     return Array.from(links);
   }
 
-  private extractPrice($: CheerioAPI): string {
-    const spans = $('div.price-value span');
-    for (const span of spans.toArray()) {
-      const text = normalizeWhitespace($(span).text());
-      if (text.includes('R$')) {
-        return priceParser(text.replace(/venda/i, ''));
-      }
-    }
-    return '';
-  }
-
-  private extractTitle($: CheerioAPI): string {
-    return normalizeWhitespace($('h1.title-property').first().text());
-  }
-
   protected async parseProperty(url: string): Promise<Property> {
     const $ = await this.getDocument(url);
-    const title = this.extractTitle($);
-    const price = this.extractPrice($);
-
-    return {
-      titulo: title,
-      valor: price,
-      link: sanitizeUrl(url),
-    };
+    return parsePropertyHtml($.html(), url, 'wimoveis');
   }
 
   async isValid(url: string): Promise<boolean> {
-    try {
-      const $ = await this.getDocument(url);
-      const title = this.extractTitle($);
-      const price = this.extractPrice($);
-
-      // Link é válido se conseguir extrair título E preço
-      return !!(title && price);
-    } catch (_error) {
-      // Se houver erro ao acessar a página (404, rede, etc), link é inválido
-      return false;
-    }
+    return (await this.verify(url)).verification === 'active';
   }
 }

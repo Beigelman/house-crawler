@@ -1,21 +1,15 @@
+import { parsePropertyHtml } from '../property/parsing.ts';
 import type { CheerioAPI } from 'cheerio';
 
 import { Property, PropertyProvider, SearchParams } from '../types.ts';
-import {
-  buildAbsoluteUrl,
-  buildPageUrl,
-  isSameDomain,
-  normalizeWhitespace,
-  priceParser,
-  sanitizeUrl,
-} from './utils.ts';
+import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './utils.ts';
 
 export class DfImoveisProvider extends PropertyProvider {
   private static readonly maxListingPages = 20;
   protected baseUrl: string;
 
-  constructor(searchParams: SearchParams) {
-    super('DF Imóveis', searchParams);
+  constructor(searchParams: SearchParams, signal?: AbortSignal) {
+    super('DF Imóveis', searchParams, signal);
     this.baseUrl = 'https://www.dfimoveis.com.br';
   }
 
@@ -45,7 +39,7 @@ export class DfImoveisProvider extends PropertyProvider {
   private extractListingLinks($: CheerioAPI): string[] {
     const links = new Set<string>();
 
-    $('a[href]').each((_: any, element: any) => {
+    $('a[href]').each((_, element) => {
       const href = $(element).attr('href') ?? '';
       if (!href.includes('/imovel/')) {
         return;
@@ -81,45 +75,12 @@ export class DfImoveisProvider extends PropertyProvider {
     }${hasParking ? '&vagasdegaragem=1' : ''}`;
   }
 
-  private extractDescription($: CheerioAPI): string {
-    const headline = normalizeWhitespace(
-      $('div.imovel-title h1.headline-small ').first().text(),
-    );
-    if (headline) {
-      return headline;
-    }
-
-    return '';
-  }
-
-  private extractPrice($: CheerioAPI): string {
-    const price = priceParser($('p.precoAntigoSalao').first().text());
-    return price;
-  }
-
   protected async parseProperty(url: string): Promise<Property> {
     const $ = await this.getDocument(url);
-    const price = this.extractPrice($);
-    const description = this.extractDescription($);
-
-    return {
-      titulo: description,
-      valor: price,
-      link: sanitizeUrl(url),
-    };
+    return parsePropertyHtml($.html(), url, 'dfimoveis');
   }
 
   async isValid(url: string): Promise<boolean> {
-    try {
-      const $ = await this.getDocument(url);
-      const price = this.extractPrice($);
-      const description = this.extractDescription($);
-
-      // Link é válido se conseguir extrair título E preço
-      return !!(description && price);
-    } catch (_error) {
-      // Se houver erro ao acessar a página (404, rede, etc), link é inválido
-      return false;
-    }
+    return (await this.verify(url)).verification === 'active';
   }
 }

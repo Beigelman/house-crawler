@@ -1,5 +1,7 @@
 # House Crawler 🏠
 
+A interface privada **Casa Radar** adiciona buscas salvas, favoritos, histórico de preços e controle de coleta. Veja o [guia da interface e migração](docs/property-interface.md). O worker novo exige `SUPABASE_SERVICE_ROLE_KEY`; as instruções antigas de acesso anônimo abaixo são históricas e não se aplicam ao schema privado.
+
 > Sistema automatizado de monitoramento de imóveis que realiza web scraping em
 > múltiplos portais imobiliários, detecta novos anúncios e envia notificações
 > por email.

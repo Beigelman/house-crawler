@@ -2,29 +2,16 @@ import { delay } from '@std/async/delay';
 import type { CheerioAPI } from 'cheerio';
 import { load } from 'cheerio';
 
-export interface Property {
-  titulo: string;
-  valor: string;
-  link: string;
-}
-
+import type { Property, SearchParams } from './property/model.ts';
+import { parsePropertyHtml } from './property/parsing.ts';
+import { fetchWithRetry, HttpError } from './property/http.ts';
+import { sanitizeDiagnostic } from './property/runner.ts';
+export type { Property, SearchParams } from './property/model.ts';
 export interface ProviderConfig {
   name: string;
   baseUrl: string;
   delayMs?: number;
 }
-
-export type SearchParams = {
-  neighborhoods: string[];
-  numberOfRooms: number[];
-  numberOfSuites: number;
-  minArea: number;
-  maxArea: number;
-  minPrice: number;
-  maxPrice: number;
-  hasElevator: boolean;
-  hasParking: boolean;
-};
 
 const HEADERS = {
   'User-Agent':
@@ -47,7 +34,11 @@ export abstract class PropertyProvider {
   public name: string;
   protected searchParams: SearchParams;
 
-  constructor(name: string, searchParams: SearchParams) {
+  constructor(
+    name: string,
+    searchParams: SearchParams,
+    protected signal?: AbortSignal,
+  ) {
     this.name = name;
     this.searchParams = searchParams;
   }
@@ -56,34 +47,68 @@ export abstract class PropertyProvider {
    * Método principal para coletar todas as propriedades do provider
    */
   async collect(): Promise<Property[]> {
+    return (await this.collectOutcome()).properties;
+  }
+
+  async collectOutcome(): Promise<
+    { properties: Property[]; outcome: string; error: string | null }
+  > {
+    const properties: Property[] = [];
+    let failed = 0;
+    let error: string | null = null;
     try {
       const links = await this.collectListingLinks(
         this.buildListUrl(this.searchParams),
       );
-      if (links.length === 0) {
-        console.log(
-          `[${this.name}] Nenhum link de imóvel encontrado na listagem.`,
-        );
-        return [];
-      }
-
-      const results: Property[] = [];
       for (const link of links) {
+        this.signal?.throwIfAborted();
         try {
-          const property = await this.parseProperty(link);
-          results.push(property);
-          this.printProperty(property);
-        } catch (error) {
-          console.error(`[${this.name}] Erro ao processar ${link}:`, error);
+          const p = await this.parseProperty(link);
+          if (!p.titulo) throw new Error('parse title missing');
+          properties.push(p);
+        } catch (e) {
+          failed++;
+          error = sanitizeDiagnostic(e);
         }
-
-        await delay(1200);
+        await delay(1200, { signal: this.signal });
       }
+      return {
+        properties,
+        outcome: failed
+          ? (properties.length ? 'partial' : 'failed')
+          : 'succeeded',
+        error,
+      };
+    } catch (e) {
+      return {
+        properties,
+        outcome: properties.length ? 'partial' : 'failed',
+        error: sanitizeDiagnostic(e),
+      };
+    }
+  }
 
-      return results;
-    } catch (error) {
-      this.handleError(error);
-      return [];
+  async verify(url: string): Promise<{ verification: string }> {
+    try {
+      const $ = await this.getDocument(url);
+      const text = $('body').text();
+      if (
+        /an[uú]ncio (?:foi )?removido|im[oó]vel (?:foi )?removido/i.test(text)
+      ) return { verification: 'removed' };
+      const p = parsePropertyHtml(
+        $.html(),
+        url,
+        this.name === 'DF Imóveis' ? 'dfimoveis' : 'wimoveis',
+      );
+      return {
+        verification: p.titulo && p.price_cents != null ? 'active' : 'unknown',
+      };
+    } catch (e) {
+      return {
+        verification: e instanceof HttpError && [404, 410].includes(e.status)
+          ? 'removed'
+          : 'unknown',
+      };
     }
   }
 
@@ -97,13 +122,10 @@ export abstract class PropertyProvider {
    * Busca o documento HTML usando Cheerio
    */
   protected async getDocument(url: string): Promise<CheerioAPI> {
-    const response = await fetch(url, { headers: HEADERS });
-    if (!response.ok) {
-      throw new Error(
-        `Falha ao acessar ${url}: ${response.status} ${response.statusText}`,
-      );
-    }
-
+    const response = await fetchWithRetry(url, {
+      headers: HEADERS,
+      signal: this.signal,
+    });
     const html = await response.text();
     return load(html);
   }

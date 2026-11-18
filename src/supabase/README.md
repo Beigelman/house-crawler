@@ -1,3 +1,5 @@
+> Configuração atual: [guia da interface privada](../../docs/property-interface.md). O bootstrap antigo está desabilitado; use a migração e a credencial de servidor. As instruções históricas abaixo não autorizam policies públicas.
+
 make# Configuração do Banco de Dados Supabase
 
 ## Problema: Validador não deleta links inválidos
