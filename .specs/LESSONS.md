@@ -26,6 +26,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.md:C63 (properties)
 - last seen: 2026-11-18T00:25:00Z
 
+### L-003 - Apply length limits to the persisted representation, including leading and trailing padding.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `properties` · harmful: 0
+- features: property-interface
+- evidence: verification.round2.md:C28 (properties)
+- last seen: 2026-11-18T01:05:24Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

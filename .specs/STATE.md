@@ -6,9 +6,9 @@ Project decisions remain authoritative in [project/STATE.md](project/STATE.md); 
 
 **Feature**: property-interface
 
-**Where**: Plan approved; 64 frozen checks derived under profile light; implementation is complete locally and author proofs pass (38 Deno tests and 28 browser tests). Round 1 independently found two runtime defects and incomplete proofs; those are fixed or expanded locally, and scoped round 2 remains required.
+**Where**: Plan approved; 64 frozen checks derived under profile light; implementation is complete locally and author proofs pass (38 Deno tests and 28 browser tests). Independent round 2 proved 63/64 checks. Its remaining padded-name length defect is fixed locally with an idempotent existing-constraint upgrade; final scoped verification remains required.
 
-**In progress**: Preparing the fix commit and scoped independent re-verification; original acceptance criteria and named proof commands are unchanged.
+**In progress**: Preparing the final validation fix commit and round 3; original acceptance criteria and named proof commands are unchanged.
 
 **Next step**: Fresh Verifier reads plan/checks and skill verify instructions, reruns named proofs sequentially against local Supabase, and writes verification.md; run validate_verification.py afterward.
 

@@ -827,3 +827,34 @@ for (
     },
   });
 }
+
+test('AC28 padded names obey raw persisted length and retain a valid eighty-character boundary', async () => {
+  const [original] =
+    await sql`select * from property_profile where id=${profile}`;
+  try {
+    for (
+      const name of [
+        ' ' + 'x'.repeat(80),
+        'x'.repeat(80) + ' ',
+        ' '.repeat(10) + 'x'.repeat(71),
+        ' '.repeat(80),
+      ]
+    ) {
+      await assert.rejects(() =>
+        sql`update property_profile set name=${name} where id=${profile}`
+      );
+      assert.deepEqual(
+        (await sql`select * from property_profile where id=${profile}`)[0],
+        original,
+      );
+    }
+    const valid = ' ' + 'x'.repeat(79);
+    await sql`update property_profile set name=${valid} where id=${profile}`;
+    const [row] =
+      await sql`select name,char_length(name) as n from property_profile where id=${profile}`;
+    assert.equal(row.name, valid);
+    assert.equal(row.n, 80);
+  } finally {
+    await sql`update property_profile set name=${original.name} where id=${profile}`;
+  }
+});

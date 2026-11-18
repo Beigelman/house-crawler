@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 4,
   "lessons": [
     {
       "id": "L-001",
@@ -40,6 +40,24 @@
       ],
       "created": "2026-11-18T00:25:00Z",
       "last_seen": "2026-11-18T00:25:00Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::apply length limits to the persisted representation including leading and trailing padding",
+      "text": "Apply length limits to the persisted representation, including leading and trailing padding.",
+      "signal": "ac_gap",
+      "scope": "properties",
+      "status": "candidate",
+      "features": [
+        "property-interface"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.round2.md:C28 (properties)"
+      ],
+      "created": "2026-11-18T01:05:24Z",
+      "last_seen": "2026-11-18T01:05:24Z"
     }
   ]
 }

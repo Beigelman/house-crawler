@@ -44,7 +44,11 @@ begin
  return jsonb_typeof(p->'hasElevator')='boolean' and jsonb_typeof(p->'hasParking')='boolean';
 exception when others then return false;
 end $$;
-create table if not exists public.property_profile(id uuid primary key default gen_random_uuid(),name text not null check(char_length(trim(name)) between 1 and 80),enabled boolean not null default true,params jsonb not null check(private.valid_profile(params)),providers text[] not null check(cardinality(providers)>0 and providers <@ array['dfimoveis','wimoveis']::text[]),created_at timestamptz not null default now());
+create table if not exists public.property_profile(id uuid primary key default gen_random_uuid(),name text not null check(char_length(name) between 1 and 80 and char_length(trim(name))>0),enabled boolean not null default true,params jsonb not null check(private.valid_profile(params)),providers text[] not null check(cardinality(providers)>0 and providers <@ array['dfimoveis','wimoveis']::text[]),created_at timestamptz not null default now());
+-- Upgrade an already-created profile table as well as fresh installations.
+alter table public.property_profile drop constraint if exists property_profile_name_check;
+alter table public.property_profile add constraint property_profile_name_check
+ check(char_length(name) between 1 and 80 and char_length(trim(name))>0);
 create table if not exists public.property_mark(user_id uuid not null,listing_link text not null references public.real_states(link),status text check(status in ('favorite','contacted','discarded')),note text check(char_length(note)<=2000),primary key(user_id,listing_link));
 create table if not exists public.property_request(id uuid primary key default gen_random_uuid(),owner_id uuid not null,request_key uuid not null,profile_ids uuid[] not null,state text not null default 'queued' check(state in ('queued','running','succeeded','partial','failed','interrupted')),created_at timestamptz not null default now(),unique(owner_id,request_key));
 create unique index if not exists property_one_active_request on public.property_request((true)) where state in ('queued','running');
