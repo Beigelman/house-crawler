@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import * as local from './local.ts';
+import { propertyStore } from '../src/property/store.ts';
+import { pollWorker } from '../src/property/runner.ts';
 
 Deno.test('SCHED-01 Brasília slots include exact boundaries and midnight catch-up', async () => {
   const cases = [
@@ -91,4 +93,71 @@ Deno.test('SCHED-06 scheduled enqueue denies anonymous and authenticated callers
   assert.equal((await local.sql`select * from property_request`).length, 0);
 });
 
+Deno.test('SCHED-05 real worker adapter schedules, claims and completes a durable job', async () => {
+  await local.reset();
+  const store = propertyStore(local.admin);
+  let stopped = false;
+  await pollWorker({
+    schedule: store.schedule,
+    store: {
+      ...store,
+      finish: async (run, state, email) => {
+        await store.finish(run, state, email);
+        stopped = true;
+      },
+    },
+    providers: () => ({
+      collect: () =>
+        Promise.resolve({ properties: [], outcome: 'succeeded', error: null }),
+      verify: () => Promise.resolve({ verification: 'unknown' }),
+    }),
+    sendEmail: () => Promise.resolve({ success: true }),
+    shouldStop: () => stopped,
+  });
+  const [row] = await local
+    .sql`select q.state as request_state,r.state as run_state,r.profiles from property_request q join property_run r on r.request_id=q.id`;
+  assert.equal(row.request_state, 'succeeded');
+  assert.equal(row.run_state, 'succeeded');
+  assert.deepEqual(row.profiles.map((p: { id: string }) => p.id), [
+    local.profile,
+  ]);
+});
+
 globalThis.addEventListener('unload', () => void local.sql.end());
+
+Deno.test('SCHED-05/07 actual worker CLI schedules by default with no manual request', async () => {
+  await local.reset();
+  const root = new URL('..', import.meta.url).pathname;
+  const cwd = await Deno.makeTempDir({ prefix: 'scheduled-worker-' });
+  const worker = new Deno.Command(Deno.execPath(), {
+    args: [
+      'run',
+      '-A',
+      '--config=' + root + 'deno.json',
+      '--preload=' + root + 'tests/cli_preload.ts',
+      root + 'src/worker.ts',
+    ],
+    cwd,
+    env: { PROPERTY_TEST_MODE: 'scheduled' },
+    stdout: 'piped',
+    stderr: 'piped',
+  }).spawn();
+  const output = worker.output();
+  try {
+    const deadline = Date.now() + 15000;
+    let rows: { state: string }[] = [];
+    do {
+      rows = await local.sql`select state from property_request`;
+      if (rows[0]?.state === 'succeeded') break;
+      await new Promise((r) => setTimeout(r, 100));
+    } while (Date.now() < deadline);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].state, 'succeeded');
+    const [run] = await local.sql`select state from property_run`;
+    assert.equal(run.state, 'succeeded');
+  } finally {
+    worker.kill('SIGTERM');
+    await output;
+    await Deno.remove(cwd, { recursive: true });
+  }
+});

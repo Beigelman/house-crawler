@@ -13,6 +13,10 @@ for (
 ) Deno.env.set(key, value);
 console.log('TEST_WORKER_PID=' + Deno.pid);
 const mode = Deno.env.get('PROPERTY_TEST_MODE') || 'success';
+// Existing CLI/browser fixtures exercise manual jobs; the scheduled fixture
+// exercises the production default without an environment override.
+if (mode === 'scheduled') Deno.env.delete('WORKER_SCHEDULE_ENABLED');
+else Deno.env.set('WORKER_SCHEDULE_ENABLED', 'false');
 const detail = await Deno.readTextFile(
   new URL('fixtures/wimoveis.html', import.meta.url),
 );

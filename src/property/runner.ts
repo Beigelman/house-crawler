@@ -7,6 +7,7 @@ export type Run = {
 };
 export interface Store {
   activeRunId?(): Promise<string | null>;
+  schedule?(): Promise<{ outcome: string; scheduled_at?: string }>;
   claim(kind: string): Promise<Run | null>;
   renew(run: Run): Promise<unknown>;
   save(
@@ -35,6 +36,7 @@ export interface Provider {
   verify(url: string): Promise<{ verification: string }>;
 }
 export type Dependencies = {
+  schedule?: Store['schedule'];
   sleep?: (ms: number) => Promise<void>;
   store: Store;
   providers: (
@@ -248,6 +250,15 @@ export async function pollWorker(
   while (!deps.shouldStop?.()) {
     try {
       await deps.store.heartbeat();
+      try {
+        const scheduled = await deps.schedule?.();
+        if (scheduled?.outcome === 'accepted') {
+          console.log(`Coleta agendada: ${scheduled.scheduled_at}`);
+        }
+      } catch (e) {
+        // An unavailable scheduler must not prevent manual queue processing.
+        console.error('Erro do agendamento:', sanitizeDiagnostic(e));
+      }
       const r = await executeRun('worker', deps);
       if (r.state !== 'idle') console.log(r.summary);
     } catch (e) {

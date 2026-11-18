@@ -49,6 +49,18 @@ Somente esse UUID recebe acesso. Não use `user_metadata` editável para autoriz
 
 `deno task worker` não recebe flags. Ele lê `.env`, publica heartbeat, procura solicitações a cada 30 segundos e renova o lease a cada 30 segundos durante a execução. Após 120 segundos sem renovação, o próximo processo interrompe o run antigo; commits com o token antigo são recusados. Solicitações interrompidas não são reexecutadas automaticamente.
 
+### Coleta agendada no worker
+
+Aplique também `supabase/migrations/20261118223050_property_worker_schedule.sql` antes de reiniciar o worker. Ele agenda coletas diariamente às **06:00, 14:00 e 22:00 no fuso America/Sao_Paulo**, usando o relógio do banco. Não precisa instalar cron no computador nem habilitar pg_cron.
+
+Em cada ciclo, o worker chama `enqueue_scheduled_property_crawl` com sua credencial de servidor. A função coloca uma solicitação na mesma fila de “Coletar agora”, com o proprietário e todas as buscas habilitadas. Depois, `claim_property_run` assume a solicitação e registra a execução e seus resultados. O frontend pode ficar fechado.
+
+O agendamento começa após aplicar a migração e reiniciar `deno task worker`. Ao iniciar ou retornar de um período offline, o worker faz uma única coleta de recuperação para o horário agendado mais recente, inclusive se esse horário foi no dia anterior. Não acumula todas as coletas perdidas. A chave persistida impede repetir o mesmo horário após reinícios ou com múltiplos workers. Uma fila ocupada adia a nova solicitação até haver espaço; sem proprietário ou buscas habilitadas, nada é criado. Uma falha no agendamento não impede o processamento de solicitações manuais.
+
+O worker precisa estar em execução e o computador acordado para iniciar coletas. Ele verifica o agendamento no máximo 30 segundos após terminar a execução anterior; coletas longas podem atrasar o próximo horário. Não mantenha os antigos timers de coleta do sistema ativos junto desse agendamento, pois eles criam execuções independentes. A validação continua sendo um comando/timer separado.
+
+Para manter somente a fila manual ou continuar usando timers externos, defina `WORKER_SCHEDULE_ENABLED=false` no `.env` e reinicie o worker. O padrão é agendamento habilitado.
+
 O arquivo `scripts/house-worker.service` é um exemplo de **serviço systemd de usuário**. Ajuste WorkingDirectory, EnvironmentFile e o caminho do executável Deno para seu host antes de instalar. Não instala nem modifica os timers existentes. Em hosts sem systemd, use o supervisor já escolhido para executar o mesmo comando.
 
 Saídas: 0 para execução concluída, 1 para parcial/falha, 2 para coletor ocupado. Resumos incluem o UUID da execução. O daemon permanece ativo entre execuções. Credenciais e detalhes arbitrários de exceções não entram nos diagnósticos persistidos.

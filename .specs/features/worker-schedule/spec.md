@@ -31,6 +31,7 @@ Acceptance Criteria:
 4. WHILE a request is queued or running, the scheduler SHALL return busy without creating another request; when no owner or enabled profiles exist, it SHALL return no_owner or no_profiles without creating a request.
 5. WHEN a worker polls, it SHALL attempt scheduling before claiming work; if scheduling fails, it SHALL still process existing manual requests.
 6. WHEN a non-service client calls the scheduled enqueue RPC, the database SHALL deny access.
+7. WHEN WORKER_SCHEDULE_ENABLED=false, the CLI SHALL keep automatic scheduling disabled and continue processing manual requests; otherwise scheduling SHALL be enabled.
 
 ## Requirement Traceability
 
@@ -40,8 +41,9 @@ Acceptance Criteria:
 | SCHED-02 | AC2 durable payload | verified |
 | SCHED-03 | AC3 deduplication | verified |
 | SCHED-04 | AC4 busy and empty setup | verified |
-| SCHED-05 | AC5 polling and failure isolation | implementing |
+| SCHED-05 | AC5 polling and failure isolation | verified |
 | SCHED-06 | AC6 service-only RPC | verified |
+| SCHED-07 | AC7 opt out for existing external timers and manual fixtures | verified |
 
 ## Execution Plan
 
@@ -51,3 +53,7 @@ Acceptance Criteria:
 Gates: focused local database tests, polling tests, deno check src/worker.ts, and lint changed TypeScript. Independent verification follows the final task.
 
 Task 1 complete: all four tests in tests/schedule_test.ts pass against the disposable local Supabase database. Assertions cover slot timestamps, persisted owner/profile/state payload, concurrency and completion deduplication, busy/empty setup, and 401/403 denial. Each test maps to the SCHED IDs in its name. No production changes.
+
+Task 2 complete: seven schedule tests pass, including the real store adapter scheduling, claiming and completing a persisted job. Polling failure isolation completes a manual job when scheduling throws. Type check and lint pass. Existing worker suite: 23 checks pass; browser check requires an alternate port because the user frontend owns 5173.
+
+Final task gate: eight schedule tests pass, including the actual CLI default and real DB persistence. The existing browser durability test passes with an isolated temporary Playwright config on port 5175 and the manual-only fixture. No existing assertions were changed. The fixture disables scheduling to retain its manual-only scenario. Type check, lint and spec closure pass. Independent verification remains the final gate.

@@ -13,8 +13,12 @@ import {
 export async function main(kind: 'collect' | 'validate' | 'worker') {
   await load({ export: true });
   try {
+    const store = propertyStore();
     const deps: Dependencies = {
-      store: propertyStore(),
+      store,
+      schedule: Deno.env.get('WORKER_SCHEDULE_ENABLED') === 'false'
+        ? undefined
+        : store.schedule,
       sendEmail: sendNewPropertiesEmail,
       providers: (id, params, signal) => {
         const p = id === 'dfimoveis'

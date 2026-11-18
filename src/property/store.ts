@@ -14,6 +14,7 @@ export function propertyStore(
     return data as T;
   }
   return {
+    schedule: () => call('enqueue_scheduled_property_crawl', {}),
     activeRunId: async () => {
       const { data, error } = await client.from('property_run').select('id').eq(
         'state',
