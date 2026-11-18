@@ -35,7 +35,7 @@ Where: frontend/src/
 Tests: existing browser assertions
 Gate: Full
 Done when: ARCH-02 passes; no App/pages cycle; Supabase calls outside presentation.
-Status: pending
+Status: complete
 
 ### T3: Establish backend and shared boundaries
 Depends on: T2
