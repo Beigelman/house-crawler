@@ -6,16 +6,18 @@ Project decisions remain authoritative in [project/STATE.md](project/STATE.md); 
 
 **Feature**: property-interface
 
-**Where**: Plan approved; 64 frozen checks derived under profile light; implementation is complete locally and author proofs pass (38 Deno tests and 28 browser tests). Independent round 2 proved 63/64 checks. Its remaining padded-name length defect is fixed locally with an idempotent existing-constraint upgrade; final scoped verification remains required.
+**Where**: COMPLETE for local delivery. Independent round 3 passed all 64 frozen checks at implementation commit `8e6babedab9a95ae0a7b1954d8b3c7570d37fa3e`; completion gate exits 0 with zero errors/warnings.
 
-**In progress**: Preparing the final validation fix commit and round 3; original acceptance criteria and named proof commands are unchanged.
+**Evidence**: 67 Deno database/worker tests (including three nested single-browser proofs), 48 standalone browser tests, production build, Deno typecheck/lint, and local Supabase security advisors pass. Report: `features/property-interface/verification.md`; earlier findings remain in `verification.round1.md` and `verification.round2.md`.
 
-**Next step**: Fresh Verifier reads plan/checks and skill verify instructions, reruns named proofs sequentially against local Supabase, and writes verification.md; run validate_verification.py afterward.
+**In progress**: None.
 
-**Blockers**: No local blocker. Deployment, real database migration, production credentials/Auth configuration, and portal reachability on the real host remain go-live actions requiring separate authorization.
+**Next step**: Production rollout only when explicitly authorized, following `docs/property-interface.md`: inventory/apply migration, configure owner/Auth redirects and server-only worker credentials, deploy the static frontend, install worker supervision, and smoke-test portals on the actual host.
 
-**Uncommitted**: Existing flight/codebase documents under .specs were already untracked before this work and remain separate. The existing project decision log records approved AD-004–006; do not stage unrelated pre-existing specification files.
+**Blockers**: None for the verified local implementation. Production host, credentials, Auth configuration and live portal reachability are deployment inputs; no production rollout is claimed.
+
+**Uncommitted**: Existing flight/codebase/project specification directories predate this feature and remain separate. Their existing project decision log holds approved AD-004–006; unrelated specification files were not staged.
 
 **Branch**: main
 
-**Profile**: light. No faults injected under this profile. Push, deploy, and production-data changes have not been performed.
+**Profile**: light. No faults injected. User approved keeping the displayed layout. Final documentary commits record verification; implementation remains the reviewed `8e6babe` code.

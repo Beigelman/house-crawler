@@ -32,6 +32,30 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: verification.round2.md:C28 (properties)
 - last seen: 2026-11-18T01:05:24Z
 
+### L-004 - Prove authorization denial against populated records and valid mutation requests so another guard cannot mask missing access control.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `authorization` · harmful: 0
+- features: property-interface
+- evidence: verification.round1.md:C3 (authorization)
+- last seen: 2026-11-18T01:13:28Z
+
+### L-005 - Scan every emitted build asset for harmless server-secret values supplied to the build, rather than checking variable names alone.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `frontend` · harmful: 0
+- features: property-interface
+- evidence: verification.round1.md:C4 (frontend)
+- last seen: 2026-11-18T01:13:28Z
+
+### L-006 - Exercise migrations from the actual legacy schema and compare the entire preserved projection after repeated application.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `database` · harmful: 0
+- features: property-interface
+- evidence: verification.round1.md:C5 (database)
+- last seen: 2026-11-18T01:13:28Z
+
+### L-007 - Assert every saved configuration field after reload; visible form controls do not prove persisted values.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `frontend` · harmful: 0
+- features: property-interface
+- evidence: verification.round1.md:C27 (frontend)
+- last seen: 2026-11-18T01:13:28Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
