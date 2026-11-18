@@ -1,7 +1,7 @@
 // Local-only process used to exercise the shared production run boundary.
 import { admin, sql } from './local.ts';
-import { propertyStore } from '../src/property/store.ts';
-import { executeRun } from '../src/property/runner.ts';
+import { propertyStore } from '../backend/src/property/store.ts';
+import { executeRun } from '../backend/src/property/runner.ts';
 let contacted = false;
 const observed = async () => {
   if (!contacted) {

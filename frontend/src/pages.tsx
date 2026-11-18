@@ -11,7 +11,7 @@ import {
   supabase,
 } from './api';
 import { Empty, Failure, Loading } from './App';
-import type { Listing, Profile } from '../../src/property/model.ts';
+import type { Listing, Profile } from '../../backend/src/property/model.ts';
 const source = (s: string | null | undefined) =>
   s === 'dfimoveis'
     ? 'DF Imóveis'

@@ -9,7 +9,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import postgres from 'postgres';
 const c = JSON.parse(
   execFileSync('rtk', ['supabase', 'status', '-o', 'json'], {
-    cwd: new URL('../..', import.meta.url),
+    cwd: new URL('../../backend/', import.meta.url),
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
   }),
@@ -455,13 +455,13 @@ test('AC01 actual local magic links complete requested and default callbacks', a
       type: 'magiclink',
       email: 'owner@example.test',
       options: {
-        redirectTo: 'http://127.0.0.1:5173/login' +
+        redirectTo: 'http://127.0.0.1:5174/login' +
           (target === '/' ? '' : '?next=' + encodeURIComponent(target)),
       },
     });
     if (generated.error) throw generated.error;
     await p.goto(generated.data.properties.action_link);
-    await expect(p).toHaveURL('http://127.0.0.1:5173' + target);
+    await expect(p).toHaveURL('http://127.0.0.1:5174' + target);
     await expect(p.getByRole('button', { name: 'Sair' })).toBeVisible();
     await context.close();
   }
@@ -962,7 +962,7 @@ async function localWorker() {
     '-A',
     '--config=' + root + 'deno.json',
     '--preload=' + root + 'tests/cli_preload.ts',
-    root + 'src/worker.ts',
+    root + 'backend/src/worker.ts',
   ], { cwd, env: { ...process.env, PROPERTY_TEST_MODE: 'success' } });
   let output = '';
   child.stdout.on('data', (d) => output += String(d));

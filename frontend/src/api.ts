@@ -1,6 +1,6 @@
-import { toCentavos } from '../../src/property/model.ts';
+import { toCentavos } from '../../backend/src/property/model.ts';
 import { createClient } from '@supabase/supabase-js';
-import type { Listing, Profile } from '../../src/property/model.ts';
+import type { Listing, Profile } from '../../backend/src/property/model.ts';
 export const configured = Boolean(
   import.meta.env.VITE_SUPABASE_URL &&
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,

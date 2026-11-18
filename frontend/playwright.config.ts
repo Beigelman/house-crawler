@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 const c = JSON.parse(
   execFileSync('rtk', ['supabase', 'status', '-o', 'json'], {
-    cwd: new URL('..', import.meta.url),
+    cwd: new URL('../backend/', import.meta.url),
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
   }),
@@ -15,14 +15,14 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: 'http://127.0.0.1:5174',
     timezoneId: 'UTC',
     trace: 'retain-on-failure',
   },
   webServer: {
     cwd: new URL('.', import.meta.url).pathname,
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:5173',
+    command: 'npm run dev -- --port 5174 --strictPort',
+    url: 'http://127.0.0.1:5174',
     reuseExistingServer: false,
     env: {
       VITE_SUPABASE_URL: c.API_URL,

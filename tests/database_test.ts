@@ -66,11 +66,11 @@ test('AC03 private tables and enqueue deny non-owner and missing JWT', async () 
 test('AC05 migration preserves legacy data on repeated application', async () => {
   await sql`insert into real_states(link,titulo,valor,created_at) values('https://legacy.test/1','Original','R$ 1.234.567,89','2024-01-02T00:00:00Z')`;
   const migration = await Deno.readTextFile(
-    (await Array.fromAsync(Deno.readDir('supabase/migrations'))).filter((x) =>
+    (await Array.fromAsync(Deno.readDir('backend/supabase/migrations'))).filter((x) =>
         x.name.endsWith('_property_interface.sql')
       )[0]
-      ? 'supabase/migrations/' +
-        (await Array.fromAsync(Deno.readDir('supabase/migrations'))).find((x) =>
+      ? 'backend/supabase/migrations/' +
+        (await Array.fromAsync(Deno.readDir('backend/supabase/migrations'))).find((x) =>
           x.name.endsWith('_property_interface.sql')
         )!.name
       : 'missing',
@@ -380,7 +380,7 @@ Deno.test({
 const { default: postgres } = await import('postgres');
 const migrationText = () =>
   Deno.readTextFile(
-    'supabase/migrations/20261117235107_property_interface.sql',
+    'backend/supabase/migrations/20261117235107_property_interface.sql',
   );
 async function legacyDatabase(
   values: { link: string; titulo: string; valor: string; created_at: string }[],

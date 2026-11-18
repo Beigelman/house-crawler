@@ -2,7 +2,7 @@ import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
 const status = await new Deno.Command('rtk', {
   args: ['supabase', 'status', '-o', 'json'],
-  cwd: new URL('..', import.meta.url),
+  cwd: new URL('../backend/', import.meta.url),
   stdout: 'piped',
   stderr: 'null',
 }).output();

@@ -4,11 +4,11 @@
     "strict": true
   },
   "tasks": {
-    "run": "deno run --allow-net --allow-write --allow-env --allow-read src/search_properties.ts",
-    "validate": "deno run --allow-net --allow-write --allow-env --allow-read src/validate_properties.ts",
+    "run": "deno run --allow-net --allow-write --allow-env --allow-read backend/src/search_properties.ts",
+    "validate": "deno run --allow-net --allow-write --allow-env --allow-read backend/src/validate_properties.ts",
     "lint": "deno lint",
     "fmt": "deno fmt",
-    "worker": "deno run --allow-net --allow-env --allow-read src/worker.ts",
+    "worker": "deno run --allow-net --allow-env --allow-read backend/src/worker.ts",
     "test": "deno test -A tests/"
   },
   "imports": {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as local from './local.ts';
-import { propertyStore } from '../src/property/store.ts';
-import { pollWorker } from '../src/property/runner.ts';
+import { propertyStore } from '../backend/src/property/store.ts';
+import { pollWorker } from '../backend/src/property/runner.ts';
 
 Deno.test('SCHED-01 Brasília slots include exact boundaries and midnight catch-up', async () => {
   const cases = [
@@ -138,7 +138,7 @@ Deno.test('SCHED-05/07 actual worker CLI schedules by default with no manual req
       '-A',
       '--config=' + root + 'deno.json',
       '--preload=' + root + 'tests/cli_preload.ts',
-      root + 'src/worker.ts',
+      root + 'backend/src/worker.ts',
     ],
     cwd,
     env: { PROPERTY_TEST_MODE: 'scheduled' },
