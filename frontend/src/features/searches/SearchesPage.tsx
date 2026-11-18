@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { Profile } from '../../../../backend/src/property/model.ts';
+import type { Profile } from '../../../../shared/property.ts';
 import { profiles } from './searches.api';
 import { SearchProfileForm } from './SearchProfileForm';
 import { LoadingState } from '../../components/LoadingState';

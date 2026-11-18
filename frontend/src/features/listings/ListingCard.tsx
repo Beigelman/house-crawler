@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { Listing } from '../../../../backend/src/property/model.ts';
+import type { Listing } from '../../../../shared/property.ts';
 import { money, source } from '../../lib/formatters';
 import { PropertyPhoto } from './PropertyPhoto';
 

@@ -2,11 +2,10 @@ import { delay } from '@std/async/delay';
 import type { CheerioAPI } from 'cheerio';
 import { load } from 'cheerio';
 
-import type { Property, SearchParams } from './property/model.ts';
-import { parsePropertyHtml } from './property/parsing.ts';
-import { fetchWithRetry, HttpError } from './property/http.ts';
-import { sanitizeDiagnostic } from './property/runner.ts';
-export type { Property, SearchParams } from './property/model.ts';
+import type { Property, SearchParams } from '../../../../shared/property.ts';
+import { parsePropertyHtml } from './parse-property-html.ts';
+import { fetchWithRetry, HttpError } from '../../platform/http-client.ts';
+import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
 export interface ProviderConfig {
   name: string;
   baseUrl: string;

@@ -1,8 +1,9 @@
-import { parsePropertyHtml } from '../property/parsing.ts';
+import { parsePropertyHtml } from './parse-property-html.ts';
 import type { CheerioAPI } from 'cheerio';
 
-import { Property, PropertyProvider, SearchParams } from '../types.ts';
-import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './utils.ts';
+import { Property, SearchParams } from '../../../../shared/property.ts';
+import { PropertyProvider } from './base-property-provider.ts';
+import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './html-utils.ts';
 
 export class DfImoveisProvider extends PropertyProvider {
   private static readonly maxListingPages = 20;

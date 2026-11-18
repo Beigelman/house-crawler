@@ -11,5 +11,5 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "../backend/src/property/model.ts"]
+  "include": ["src", "../shared"]
 }

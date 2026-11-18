@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { check } from '../../lib/query-result';
-import { toCentavos } from '../../../../backend/src/property/model.ts';
-import type { Listing } from '../../../../backend/src/property/model.ts';
+import { toCentavos } from '../../../../shared/money.ts';
+import type { Listing } from '../../../../shared/property.ts';
 export async function browse(params: URLSearchParams) {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const marked = params.get('mark');

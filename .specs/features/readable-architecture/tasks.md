@@ -43,7 +43,7 @@ Where: backend/src/, shared/, affected imports
 Tests: existing parsing, filtering, HTTP and integration assertions
 Gate: Full
 Done when: ARCH-04 passes; types module no longer executes scraping; shared is pure.
-Status: pending
+Status: complete
 
 ### T4: Separate collection validation and worker lifecycle
 Depends on: T3

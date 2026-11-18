@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
-import type { Property } from '../types.ts';
-import { generateEmailHTML, generateEmailText } from './email-template.ts';
+import type { Property } from '../../../../shared/property.ts';
+import {
+  generateEmailHTML,
+  generateEmailText,
+} from './property-email-template.ts';
 
 type EmailConfig = {
   apiKey: string | undefined;

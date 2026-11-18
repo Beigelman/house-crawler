@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSupabaseClient } from '../supabase/supabase.ts';
-import type { Property } from './model.ts';
-import type { Run, Store } from './runner.ts';
+import { getSupabaseClient } from '../../platform/supabase-client.ts';
+import type { Property } from '../../../../shared/property.ts';
+import type { Run, Store } from '../ports.ts';
 export function propertyStore(
   client: SupabaseClient = getSupabaseClient(),
 ): Store {

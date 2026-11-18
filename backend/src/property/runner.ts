@@ -1,69 +1,7 @@
-import { matchesProfile, type Profile, type Property } from './model.ts';
-export type Run = {
-  run_id: string;
-  token: number;
-  kind: string;
-  profiles: Profile[];
-};
-export interface Store {
-  activeRunId?(): Promise<string | null>;
-  schedule?(): Promise<{ outcome: string; scheduled_at?: string }>;
-  claim(kind: string): Promise<Run | null>;
-  renew(run: Run): Promise<unknown>;
-  save(
-    run: Run,
-    items: Property[],
-    profile: string | null,
-  ): Promise<Property[]>;
-  source(
-    run: Run,
-    value: {
-      source: string;
-      profile_id: string | null;
-      count: number;
-      outcome: string;
-      error_category: string | null;
-    },
-  ): Promise<unknown>;
-  finish(run: Run, state: string, email: string): Promise<unknown>;
-  listings(): Promise<Property[]>;
-  heartbeat(): Promise<unknown>;
-}
-export interface Provider {
-  collect(): Promise<
-    { properties: Property[]; outcome: string; error: string | null }
-  >;
-  verify(url: string): Promise<{ verification: string }>;
-}
-export type Dependencies = {
-  schedule?: Store['schedule'];
-  sleep?: (ms: number) => Promise<void>;
-  store: Store;
-  providers: (
-    id: string,
-    params: Profile['params'],
-    signal?: AbortSignal,
-  ) => Provider;
-  sendEmail: (
-    items: Property[],
-  ) => Promise<{ success: boolean; error?: string }>;
-};
-export function sanitizeDiagnostic(e: unknown): string {
-  const s = e instanceof Error ? e.message : '';
-  return /403/.test(s)
-    ? 'blocked'
-    : /timeout|timed out/i.test(s)
-    ? 'timeout'
-    : /database/i.test(s)
-    ? 'database'
-    : /network|fetch/i.test(s)
-    ? 'network'
-    : /HTTP/.test(s)
-    ? 'http'
-    : /parse|extract/i.test(s)
-    ? 'parse'
-    : 'internal';
-}
+import { matchesProfile } from './domain/matches-profile.ts';
+import type { Property } from '../../../shared/property.ts';
+import type { Dependencies } from './ports.ts';
+import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
 export const exitCode = (state: string) =>
   state === 'succeeded' ? 0 : state === 'busy' ? 2 : 1;
 export async function executeRun(kind: string, deps: Dependencies) {

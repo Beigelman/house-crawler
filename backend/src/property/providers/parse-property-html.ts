@@ -1,6 +1,7 @@
 import { load } from 'cheerio';
-import { parseBRL, type Property } from './model.ts';
-import { normalizeWhitespace, sanitizeUrl } from '../providers/utils.ts';
+import { parseBRL } from './parse-brl.ts';
+import { type Property } from '../../../../shared/property.ts';
+import { normalizeWhitespace, sanitizeUrl } from './html-utils.ts';
 export function parsePropertyHtml(
   html: string,
   url: string,

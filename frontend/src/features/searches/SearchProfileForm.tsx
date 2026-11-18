@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Profile } from '../../../../backend/src/property/model.ts';
+import type { Profile } from '../../../../shared/property.ts';
 import { saveProfile } from './searches.api';
 export function SearchProfileForm(
   { initial, saved }: { initial: Profile; saved: () => void },

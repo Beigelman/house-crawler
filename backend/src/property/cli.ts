@@ -1,15 +1,11 @@
 import { load } from '@std/dotenv';
-import { DfImoveisProvider } from '../providers/df_imoveis.ts';
-import { WimoveisProvider } from '../providers/wimoveis.ts';
-import { sendNewPropertiesEmail } from '../email/email.ts';
-import { propertyStore } from './store.ts';
-import {
-  type Dependencies,
-  executeRun,
-  exitCode,
-  pollWorker,
-  sanitizeDiagnostic,
-} from './runner.ts';
+import { DfImoveisProvider } from './providers/df-imoveis.ts';
+import { WimoveisProvider } from './providers/wimoveis.ts';
+import { sendNewPropertiesEmail } from './notifications/send-property-email.ts';
+import { propertyStore } from './persistence/supabase-property-store.ts';
+import { type Dependencies } from './ports.ts';
+import { executeRun, exitCode, pollWorker } from './runner.ts';
+import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
 export async function main(kind: 'collect' | 'validate' | 'worker') {
   await load({ export: true });
   try {

@@ -1,16 +1,19 @@
 // deno-lint-ignore-file require-await
 // Async provider/store doubles implement the production promise boundary.
 import assert from 'node:assert/strict';
-import type { Property } from '../backend/src/property/model.ts';
+import type { Property } from '../shared/property.ts';
 import {
   executeRun,
   exitCode,
   pollWorker,
-  sanitizeDiagnostic,
 } from '../backend/src/property/runner.ts';
-import { matchesProfile } from '../backend/src/property/model.ts';
-import { fetchWithRetry, REQUEST_TIMEOUT_MS } from '../backend/src/property/http.ts';
-import { parsePropertyHtml } from '../backend/src/property/parsing.ts';
+import { sanitizeDiagnostic } from '../backend/src/platform/diagnostics.ts';
+import { matchesProfile } from '../backend/src/property/domain/matches-profile.ts';
+import {
+  fetchWithRetry,
+  REQUEST_TIMEOUT_MS,
+} from '../backend/src/platform/http-client.ts';
+import { parsePropertyHtml } from '../backend/src/property/providers/parse-property-html.ts';
 const params = {
   neighborhoods: ['asa-norte'],
   numberOfRooms: [3],
@@ -297,7 +300,9 @@ Deno.test('AC64 email failure keeps committed listings and never resends', async
 
 // Boundary regressions use the production persistence adapter, not callback counts.
 const local = await import('./local.ts');
-const { propertyStore } = await import('../backend/src/property/store.ts');
+const { propertyStore } = await import(
+  '../backend/src/property/persistence/supabase-property-store.ts'
+);
 const boundary = (name: string, fn: () => Promise<void>) =>
   Deno.test({
     name,
@@ -462,7 +467,9 @@ boundary(
         ? Promise.reject(new DOMException('timed out', 'TimeoutError'))
         : original(input, init);
     try {
-      const { WimoveisProvider } = await import('../backend/src/providers/wimoveis.ts');
+      const { WimoveisProvider } = await import(
+        '../backend/src/property/providers/wimoveis.ts'
+      );
       const r = await executeRun('collect', {
         ...realDeps(),
         providers: (_id, p) => {
@@ -556,7 +563,8 @@ Deno.test({
 async function withEmailCapture(
   fail: boolean,
   fn: (
-    send: typeof import('../backend/src/email/email.ts').sendNewPropertiesEmail,
+    send:
+      typeof import('../backend/src/property/notifications/send-property-email.ts').sendNewPropertiesEmail,
     calls: Record<string, unknown>[],
   ) => Promise<void>,
 ) {
@@ -587,7 +595,9 @@ async function withEmailCapture(
     return original(input, init);
   };
   try {
-    const { sendNewPropertiesEmail } = await import('../backend/src/email/email.ts');
+    const { sendNewPropertiesEmail } = await import(
+      '../backend/src/property/notifications/send-property-email.ts'
+    );
     await fn(sendNewPropertiesEmail, calls);
   } finally {
     globalThis.fetch = original;
