@@ -57,3 +57,5 @@ Task 1 complete: all four tests in tests/schedule_test.ts pass against the dispo
 Task 2 complete: seven schedule tests pass, including the real store adapter scheduling, claiming and completing a persisted job. Polling failure isolation completes a manual job when scheduling throws. Type check and lint pass. Existing worker suite: 23 checks pass; browser check requires an alternate port because the user frontend owns 5173.
 
 Final task gate: eight schedule tests pass, including the actual CLI default and real DB persistence. The existing browser durability test passes with an isolated temporary Playwright config on port 5175 and the manual-only fixture. No existing assertions were changed. The fixture disables scheduling to retain its manual-only scenario. Type check, lint and spec closure pass. Independent verification remains the final gate.
+
+Verification correction: the independent LIMIT 1 mutation survived the original single-enabled-profile fixture. The SCHED-02 payload fixture now has two enabled profiles and one disabled profile and asserts both enabled UUIDs. This strengthens the existing requirement without changing its expected behavior.

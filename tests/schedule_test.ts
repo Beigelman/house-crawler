@@ -25,6 +25,9 @@ Deno.test('SCHED-01 Brasília slots include exact boundaries and midnight catch-
 
 Deno.test('SCHED-02/03 concurrent polls persist one enabled-profile job and never replay completed slots', async () => {
   await local.reset();
+  const secondProfile = '44444444-4444-4444-8444-444444444444';
+  await local
+    .sql`insert into property_profile(id,name,params,providers) select ${secondProfile},'Second search',params,providers from property_profile limit 1`;
   await local
     .sql`insert into property_profile(name,enabled,params,providers) select 'Disabled',false,params,providers from property_profile limit 1`;
   const results = await Promise.all(
@@ -39,7 +42,7 @@ Deno.test('SCHED-02/03 concurrent polls persist one enabled-profile job and neve
   assert.equal(rows.length, 1);
   assert.equal(rows[0].owner_id, local.owner);
   assert.equal(rows[0].state, 'queued');
-  assert.deepEqual([...rows[0].profile_ids], [local.profile]);
+  assert.deepEqual([...rows[0].profile_ids], [local.profile, secondProfile]);
   await local.sql`update property_request set state='succeeded'`;
   const replay = await local.rpc('enqueue_scheduled_property_crawl', {});
   assert.equal(replay.body.outcome, 'replayed');
