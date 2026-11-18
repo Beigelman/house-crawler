@@ -1,16 +1,27 @@
 import type { Profile, Property } from '../../../shared/property.ts';
 
+export type RunKind = 'collect' | 'validate';
+export type CommandKind = RunKind | 'worker';
+export type RunState = 'succeeded' | 'partial' | 'failed';
+export type EmailState = 'not_needed' | 'sent' | 'failed';
+
+export type RunResult = {
+  run_id: string | null;
+  state: RunState | 'idle' | 'busy';
+  summary: string;
+};
+
 export type Run = {
   run_id: string;
   token: number;
-  kind: string;
+  kind: RunKind;
   profiles: Profile[];
 };
 
 export interface Store {
   activeRunId?(): Promise<string | null>;
   schedule?(): Promise<{ outcome: string; scheduled_at?: string }>;
-  claim(kind: string): Promise<Run | null>;
+  claim(kind: CommandKind): Promise<Run | null>;
   renew(run: Run): Promise<unknown>;
   save(
     run: Run,
@@ -27,7 +38,7 @@ export interface Store {
       error_category: string | null;
     },
   ): Promise<unknown>;
-  finish(run: Run, state: string, email: string): Promise<unknown>;
+  finish(run: Run, state: RunState, email: EmailState): Promise<unknown>;
   listings(): Promise<Property[]>;
   heartbeat(): Promise<unknown>;
 }

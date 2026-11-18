@@ -84,4 +84,4 @@ Where: backend/src/property/ports.ts and typed consumers
 Tests: existing unit assertions and TypeScript checks, no runtime changes
 Gate: Quick
 Done when: RunKind excludes worker; CommandKind includes worker; run/email results are explicit unions and consumers typecheck.
-Status: pending
+Status: complete

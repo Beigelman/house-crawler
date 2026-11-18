@@ -1,3 +1,4 @@
+import type { CommandKind } from '../../backend/src/property/ports.ts';
 // Local-only process used to exercise the shared production run boundary.
 import { admin, sql } from './local.ts';
 import { propertyStore } from '../../backend/src/property/persistence/supabase-property-store.ts';
@@ -10,7 +11,7 @@ const observed = async () => {
   }
   await new Promise((r) => setTimeout(r, 1500));
 };
-const result = await executeRun(Deno.args[0], {
+const result = await executeRun(Deno.args[0] as CommandKind, {
   store: propertyStore(admin),
   providers: () => ({
     collect: async () => {

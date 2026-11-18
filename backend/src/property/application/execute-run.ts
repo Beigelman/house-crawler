@@ -1,10 +1,18 @@
-import type { Dependencies } from '../ports.ts';
+import type {
+  CommandKind,
+  Dependencies,
+  EmailState,
+  RunResult,
+} from '../ports.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
 import { collectProperties } from './collect-properties.ts';
 import { validateProperties } from './validate-properties.ts';
 import { notifyNewProperties } from './notify-new-properties.ts';
 
-export async function executeRun(kind: string, deps: Dependencies) {
+export async function executeRun(
+  kind: CommandKind,
+  deps: Dependencies,
+): Promise<RunResult> {
   const run = await deps.store.claim(kind);
   if (!run) {
     const activeId = kind === 'worker'
@@ -28,7 +36,7 @@ export async function executeRun(kind: string, deps: Dependencies) {
       controller.abort(e);
     });
   }, 30000);
-  let email = 'not_needed';
+  let email: EmailState = 'not_needed';
   try {
     const result = run.kind === 'validate'
       ? await validateProperties(run, deps, controller.signal)

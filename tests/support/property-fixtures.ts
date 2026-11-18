@@ -32,7 +32,7 @@ export function harness(outcomes: ('succeeded' | 'failed')[] = ['succeeded']) {
     claim: async () => ({
       run_id: 'run',
       token: 1,
-      kind: 'collect',
+      kind: 'collect' as const,
       profiles: [{
         id: 'profile',
         name: 'Test',

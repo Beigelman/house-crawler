@@ -1,3 +1,4 @@
+import type { CommandKind } from '../property/ports.ts';
 import { loadConfiguration } from './config.ts';
 import { createDependencies } from './dependencies.ts';
 import { pollWorker } from './poll-worker.ts';
@@ -5,7 +6,7 @@ import { exitCode } from './exit-code.ts';
 import { executeRun } from '../property/application/execute-run.ts';
 import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
 
-export async function main(kind: 'collect' | 'validate' | 'worker') {
+export async function main(kind: CommandKind) {
   const config = await loadConfiguration();
   try {
     const deps = createDependencies(config);
