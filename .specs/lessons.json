@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 8,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -130,6 +130,24 @@
       ],
       "created": "2026-11-18T01:13:28Z",
       "last_seen": "2026-11-18T01:13:28Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::test scheduled profile selection with at least two enabled searches and one disabled search asserting every persisted profile uuid",
+      "text": "Test scheduled profile selection with at least two enabled searches and one disabled search, asserting every persisted profile UUID.",
+      "signal": "surviving_mutant",
+      "scope": "worker",
+      "status": "candidate",
+      "features": [
+        "worker-schedule"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/worker-schedule/validation.md: historical LIMIT 1 mutant (worker)"
+      ],
+      "created": "2026-11-18T22:53:38Z",
+      "last_seen": "2026-11-18T22:53:38Z"
     }
   ]
 }

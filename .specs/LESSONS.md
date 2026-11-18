@@ -4,7 +4,7 @@
 > Canonical state lives in `.specs/lessons.json`. Edit lessons only via the script.
 > promote_threshold=2 distinct features · window_days=45 · quarantine_threshold=2
 
-## Confirmed (load these at Plan/Checks)
+## Confirmed (load these at Specify/Design)
 
 Corroborated across multiple features. Safe to apply as guidance.
 
@@ -55,6 +55,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - features: property-interface
 - evidence: verification.round1.md:C27 (frontend)
 - last seen: 2026-11-18T01:13:28Z
+
+### L-008 - Test scheduled profile selection with at least two enabled searches and one disabled search, asserting every persisted profile UUID.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `worker` · harmful: 0
+- features: worker-schedule
+- evidence: .specs/features/worker-schedule/validation.md: historical LIMIT 1 mutant (worker)
+- last seen: 2026-11-18T22:53:38Z
 
 ## Quarantined (failed when applied - ignore)
 
