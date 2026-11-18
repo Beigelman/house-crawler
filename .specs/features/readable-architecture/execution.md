@@ -43,3 +43,14 @@ No remote writes, deployment, schema changes or migration-history rewriting.
 Historical setup SQL is explicitly labeled as obsolete, outside executable
 source. Root Deno task names and the root worker environment remain stable.
 Independent feature-level validation is recorded in `validation.md`.
+
+## Review fixes
+
+T6 restores the original mobile `.welcome` padding after the CSS split. The
+post-fix browser suite passed all 48 tests. SHA-256 comparisons confirm all four
+pre-split dashboard/listing screenshots (375px and 1440px) are byte-identical.
+
+T7 introduces RunKind/CommandKind, RunState/EmailState and RunResult unions.
+All affected production entrypoints and unit/integration/CLI helper consumers
+typecheck; all 15 unit tests pass. Changes are erased TypeScript annotations,
+with no changed test assertion or runtime branch.

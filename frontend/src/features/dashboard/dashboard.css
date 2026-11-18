@@ -57,6 +57,10 @@
 }
 
 @media (max-width: 760px) {
+  .welcome {
+    padding: 20px;
+  }
+
   .stats {
     gap: 8px;
   }

@@ -20,7 +20,7 @@ Run database and browser proofs sequentially. Do not run production entrypoints 
 ## Execution Plan
 
 ```text
-T1 -> T2 -> T3 -> T4 -> T5
+T1 -> T2 -> T3 -> T4 -> T5 -> T6 -> T7
 ```
 
 ## Task Breakdown
@@ -69,3 +69,19 @@ Tests: all existing assertions, migration hashes, formatting
 Gate: Full
 Done when: ARCH-05 passes, current architecture documented, independent verification recorded.
 Status: complete
+
+### T6: Preserve mobile dashboard spacing after CSS split
+Depends on: T5
+Where: frontend/src/features/dashboard/dashboard.css
+Tests: browser suite and exact screenshot comparison against pre-split baseline
+Gate: Full
+Done when: all four baseline screenshots are byte-identical and browser tests pass.
+Status: complete
+
+### T7: Close execution command and result types
+Depends on: T6
+Where: backend/src/property/ports.ts and typed consumers
+Tests: existing unit assertions and TypeScript checks, no runtime changes
+Gate: Quick
+Done when: RunKind excludes worker; CommandKind includes worker; run/email results are explicit unions and consumers typecheck.
+Status: pending
