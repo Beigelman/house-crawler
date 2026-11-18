@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::prove persisted membership updates through the production store including an observation that stops matching",
+      "text": "Prove persisted membership updates through the production store, including an observation that stops matching.",
+      "signal": "ac_gap",
+      "scope": "properties",
+      "status": "candidate",
+      "features": [
+        "property-interface"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md:C31 (properties)"
+      ],
+      "created": "2026-11-18T00:25:00Z",
+      "last_seen": "2026-11-18T00:25:00Z"
+    },
+    {
+      "id": "L-002",
+      "key": "ac_gap::exercise duplicate identities across differently matching profiles before asserting run wide notification deduplication",
+      "text": "Exercise duplicate identities across differently matching profiles before asserting run-wide notification deduplication.",
+      "signal": "ac_gap",
+      "scope": "properties",
+      "status": "candidate",
+      "features": [
+        "property-interface"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "verification.md:C63 (properties)"
+      ],
+      "created": "2026-11-18T00:25:00Z",
+      "last_seen": "2026-11-18T00:25:00Z"
+    }
+  ]
+}

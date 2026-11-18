@@ -2,6 +2,7 @@ import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
 const status = await new Deno.Command('rtk', {
   args: ['supabase', 'status', '-o', 'json'],
+  cwd: new URL('..', import.meta.url),
   stdout: 'piped',
   stderr: 'null',
 }).output();
@@ -19,7 +20,10 @@ export const admin = createClient(config.API_URL, config.SERVICE_ROLE_KEY, {
 export const owner = '11111111-1111-4111-8111-111111111111';
 export const other = '22222222-2222-4222-8222-222222222222';
 export const profile = '33333333-3333-4333-8333-333333333333';
+const tokenCache = new Map<string, string>();
 export async function token(id = owner) {
+  const cached = tokenCache.get(id);
+  if (cached && !(await admin.auth.getUser(cached)).error) return cached;
   const email = id === owner ? 'owner@example.test' : 'other@example.test';
   await admin.auth.admin.createUser({
     id,
@@ -35,6 +39,7 @@ export async function token(id = owner) {
     password: 'local-test-password-123',
   });
   if (error) throw error;
+  tokenCache.set(id, data.session!.access_token);
   return data.session!.access_token;
 }
 export async function reset() {

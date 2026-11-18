@@ -1,3 +1,7 @@
+import { spawn } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { execFileSync } from 'node:child_process';
@@ -63,6 +67,7 @@ test.beforeEach(async ({ page }) => {
   }
 
   await sql`truncate property_run,property_request,property_profile,real_states,property_heartbeat restart identity cascade`;
+  await sql`update private.property_lease set expires_at='-infinity',run_id=null`;
   await sql`insert into private.property_owner(singleton,user_id) values(true,${id}) on conflict(singleton) do update set user_id=excluded.user_id`;
   await sql`insert into property_profile(id,name,params,providers) values(${pid},'Minha busca',${
     sql.json(params)
@@ -434,4 +439,600 @@ test('AC19 fully loaded layouts have no overflow and capture review images', asy
       }
     }
   }
+});
+
+// Full-claim boundary proofs supplement the original narrow regression tests.
+const stamp = (v: string) =>
+  new Date(v).toLocaleString('pt-BR', { timeZone: 'UTC' });
+const titles = (page: import('@playwright/test').Page) =>
+  page.locator('[data-listing] h3').allTextContents();
+const titleFor = (i: number) => 'Apartamento ' + String(i).padStart(2, '0');
+test('AC01 actual local magic links complete requested and default callbacks', async ({ browser }) => {
+  for (const target of ['/imoveis', '/']) {
+    const context = await browser.newContext();
+    const p = await context.newPage();
+    const generated = await admin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: 'owner@example.test',
+      options: {
+        redirectTo: 'http://127.0.0.1:5173/login' +
+          (target === '/' ? '' : '?next=' + encodeURIComponent(target)),
+      },
+    });
+    if (generated.error) throw generated.error;
+    await p.goto(generated.data.properties.action_link);
+    await expect(p).toHaveURL('http://127.0.0.1:5173' + target);
+    await expect(p.getByRole('button', { name: 'Sair' })).toBeVisible();
+    await context.close();
+  }
+});
+test('AC04 harmless server-secret build sentinels stay out of every emitted asset', () => {
+  const secrets = {
+    SUPABASE_SERVICE_ROLE_KEY: 'server-secret-sentinel-never-public',
+    RESEND_API_KEY: 'resend-secret-sentinel-never-public',
+  };
+  execFileSync('rtk', ['npm', '--prefix', 'frontend', 'run', 'build'], {
+    cwd: new URL('../..', import.meta.url),
+    env: {
+      ...process.env,
+      ...secrets,
+      VITE_SUPABASE_URL: c.API_URL,
+      VITE_SUPABASE_PUBLISHABLE_KEY: c.ANON_KEY,
+    },
+    stdio: 'pipe',
+  });
+  const walk = (dir: URL): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? walk(new URL(e.name + '/', dir))
+        : [readFileSync(new URL(e.name, dir), 'utf8')]
+    );
+  const emitted = walk(new URL('../dist/', import.meta.url));
+  expect(emitted.length).toBeGreaterThan(2);
+  for (const content of emitted) {
+    for (const secret of Object.values(secrets)) {
+      expect(content).not.toContain(secret);
+    }
+  }
+});
+test('AC08 equal first-seen timestamps use URL order across pagination', async ({ page }) => {
+  await sql`update real_states set created_at='2020-01-01'`;
+  const expected = Array.from({ length: 35 }, (_, i) => i).sort((a, b) =>
+    ('https://portal.test/' + a).localeCompare('https://portal.test/' + b)
+  ).map(titleFor);
+  await page.goto(list);
+  await expect(page.locator('[data-listing]')).toHaveCount(30);
+  expect(await titles(page)).toEqual(expected.slice(0, 30));
+  await page.goto(list + '?page=2');
+  await expect(page.locator('[data-listing]')).toHaveCount(5);
+  expect(await titles(page)).toEqual(expected.slice(30));
+});
+test('AC09 independent filter exclusions and inclusive bounds precede pagination', async ({ page }) => {
+  await sql`truncate real_states cascade`;
+  const base = {
+    titulo: 'Apartamento alvo',
+    valor: 'R$ 1.000.000',
+    source: 'wimoveis',
+    price_cents: 100000000,
+    area: 90,
+    rooms: 3,
+    neighborhood: 'asa-norte',
+    created_at: '2024-01-02T00:00:00Z',
+    availability: 'active',
+  };
+  const cases = [
+    {},
+    { titulo: 'Apartamento máximo', price_cents: 140000000, area: 150 },
+    { titulo: 'Casa fora' },
+    { source: 'dfimoveis' },
+    { price_cents: 99999999 },
+    { price_cents: 140000001 },
+    { area: 89.99 },
+    { area: 150.01 },
+    { rooms: 4 },
+    { neighborhood: 'asa-sul' },
+    { created_at: '2023-12-31T00:00:00Z' },
+    { availability: 'removed' },
+    { mark: 'contacted' },
+    { mark: null },
+    ...Array.from(
+      { length: 31 },
+      () => ({ titulo: 'Casa filler', created_at: '2025-01-01T00:00:00Z' }),
+    ),
+  ];
+  for (const [i, extra] of cases.entries()) {
+    const { mark = 'favorite', ...fields } = extra as Record<string, unknown>;
+    const link = 'https://filter.test/' + i;
+    await sql`insert into real_states ${sql({ ...base, ...fields, link })}`;
+    if (mark) {
+      await sql`insert into property_mark(user_id,listing_link,status) values(${id},${link},${
+        String(mark)
+      })`;
+    }
+  }
+  await page.goto(
+    list +
+      '?q=Apartamento&source=wimoveis&minPrice=1000000&maxPrice=1400000&minArea=90&maxArea=150&rooms=3&neighborhood=asa-norte&since=2024-01-01&availability=active&mark=favorite',
+  );
+  await expect(page.locator('[data-listing]')).toHaveCount(2);
+  expect((await titles(page)).sort()).toEqual(
+    ['Apartamento alvo', 'Apartamento máximo'].sort(),
+  );
+});
+test('AC10 both numeric sequences include ties and unknown-last ordering', async ({ page }) => {
+  await sql`update real_states set availability='removed'`;
+  await sql`update real_states set availability='active',price_cents=case link when 'https://portal.test/0' then 100000000 when 'https://portal.test/3' then null else 50000000 end where link in ('https://portal.test/0','https://portal.test/1','https://portal.test/2','https://portal.test/3')`;
+  for (
+    const [sort, order] of [['price_asc', [1, 2, 0, 3]], ['price_desc', [
+      0,
+      1,
+      2,
+      3,
+    ]]] as const
+  ) {
+    await page.goto(list + '?availability=active&sort=' + sort);
+    await expect(page.locator('[data-listing]')).toHaveCount(4);
+    expect(await titles(page)).toEqual(order.map(titleFor));
+  }
+});
+test('AC11 every filter plus nondefault page survives reload and shared URL navigation', async ({ page }) => {
+  await sql`update real_states set source='wimoveis'`;
+  await sql`insert into property_mark(user_id,listing_link,status) select ${id},link,'favorite' from real_states`;
+  const path = list +
+    '?q=Apartamento&source=wimoveis&minPrice=1000000&maxPrice=2000000&minArea=90&maxArea=150&rooms=3&neighborhood=asa-norte&since=2020-01-01&availability=active&mark=favorite&sort=price_desc&page=2';
+  await page.goto(path);
+  await page.reload();
+  for (
+    const [label, value] of [
+      ['Buscar por título', 'Apartamento'],
+      ['Fonte', 'wimoveis'],
+      ['Preço mínimo', '1000000'],
+      ['Preço máximo', '2000000'],
+      ['Área mínima', '90'],
+      ['Área máxima', '150'],
+      ['Quartos', '3'],
+      ['Bairro', 'asa-norte'],
+      ['A partir de', '2020-01-01'],
+      ['Disponibilidade', 'active'],
+      ['Minha seleção', 'favorite'],
+      ['Ordenar', 'price_desc'],
+    ]
+  ) await expect(page.getByLabel(label, { exact: true })).toHaveValue(value);
+  await expect(page.getByText('Página 2')).toBeVisible();
+  await expect(page.locator('[data-listing]')).toHaveCount(4);
+  expect(await titles(page)).toEqual([3, 2, 1, 0].map(titleFor));
+  await page.goto('/');
+  await page.goto(path);
+  await expect(page.getByText('Página 2')).toBeVisible();
+  expect(await titles(page)).toEqual([3, 2, 1, 0].map(titleFor));
+});
+test('AC12 exact detail values include original price and observation times', async ({ page }) => {
+  await sql`update real_states set valor='R$ 1.234.567,89',area=120,rooms=4,suites=2,has_elevator=true,has_parking=false,created_at='2020-01-02T03:04:05Z',last_seen_at='2021-02-03T04:05:06Z',price_observed_at='2021-02-03T04:05:06Z' where link='https://portal.test/0'`;
+  await page.goto(detail);
+  await expect(page.getByRole('heading', { name: 'R$ 1.234.567,89' }))
+    .toBeVisible();
+  for (
+    const [label, value] of [
+      ['Área', '120 m²'],
+      ['Quartos', '4'],
+      ['Suítes', '2'],
+      ['Elevador', 'Sim'],
+      ['Vaga', 'Não'],
+      ['Primeira coleta', stamp('2020-01-02T03:04:05Z')],
+      ['Última coleta', stamp('2021-02-03T04:05:06Z')],
+      ['Preço observado em', stamp('2021-02-03T04:05:06Z')],
+    ]
+  ) {
+    await expect(
+      page.locator('dt').filter({ hasText: new RegExp('^' + label + '$') })
+        .locator('..').locator('dd'),
+    ).toHaveText(value);
+  }
+});
+test('AC13 missing and failed photos retain fixed placeholder dimensions', async ({ page }) => {
+  let width: number | undefined;
+  for (const photo of [null, 'http://127.0.0.1:1/broken']) {
+    await sql`update real_states set photo=${photo} where link='https://portal.test/0'`;
+    await page.goto(list);
+    const card = page.locator('[data-listing]').first();
+    await expect(card.getByText('Sem foto')).toBeVisible();
+    const box = await card.locator('.photo').boundingBox();
+    expect(box?.height).toBe(175);
+    expect(box!.width).toBeGreaterThan(0);
+    if (width) expect(box!.width).toBe(width);
+    width = box!.width;
+    await expect(card.getByRole('link')).toBeVisible();
+  }
+});
+test('AC14 dashboard scopes exact counts latest outcome and zero defaults', async ({ page }) => {
+  await sql`truncate real_states cascade`;
+  const now = '2026-01-08T12:00:00Z';
+  await page.clock.setFixedTime(new Date(now));
+  for (
+    const [i, state, source, created] of [
+      [0, 'active', 'wimoveis', '2026-01-01T12:00:00Z'],
+      [1, 'active', 'dfimoveis', '2026-01-01T12:00:00.001Z'],
+      [2, 'removed', 'dfimoveis', '2026-01-01T11:59:59.999Z'],
+      [3, 'active', 'wimoveis', '2020-01-01'],
+    ] as const
+  ) {
+    await sql`insert into real_states(link,titulo,valor,availability,source,created_at) values(${
+      'https://dashboard.test/' + i
+    },'Test','x',${state},${source},${created})`;
+  }
+  await sql`insert into property_run(kind,state,profiles,started_at) values('collect','succeeded','[]','2020-01-01'),('collect','partial','[]','2021-01-01')`;
+  await page.goto('/');
+  await expect(page.locator('.stats article').nth(0).locator('strong'))
+    .toHaveText('3');
+  await expect(page.locator('.stats article').nth(1).locator('strong'))
+    .toHaveText('2');
+  for (const name of ['DF Imóveis', 'Wimoveis']) {
+    await expect(
+      page.locator('.source-row').filter({ hasText: name }).locator('b'),
+    ).toHaveText('2');
+  }
+  await expect(page.getByText('partial', { exact: true })).toBeVisible();
+  await sql`truncate real_states,property_run cascade`;
+  await page.reload();
+  for (const n of [0, 1]) {
+    await expect(page.locator('.stats article').nth(n).locator('strong'))
+      .toHaveText('0');
+  }
+  for (const name of ['DF Imóveis', 'Wimoveis']) {
+    await expect(
+      page.locator('.source-row').filter({ hasText: name }).locator('b'),
+    ).toHaveText('0');
+  }
+  await expect(page.getByText('Sem execuções')).toBeVisible();
+});
+test('AC19 actual signed-out login fits both viewports', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const p = await ctx.newPage();
+  for (const width of [375, 1440]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.goto('/login');
+    await expect(p.getByLabel('Email')).toBeVisible();
+    expect(
+      await p.evaluate(() =>
+        document.documentElement.scrollWidth <= innerWidth
+      ),
+    ).toBe(true);
+  }
+  await ctx.close();
+});
+test('AC20 keyboard visits every rendered control with accessible name and visible focus', async ({ page, browser }) => {
+  async function traverse(p: import('@playwright/test').Page) {
+    await expect(p.getByRole('heading').first()).toBeVisible();
+    await expect(p.getByRole('status').filter({ hasText: 'Carregando' }))
+      .toHaveCount(0);
+    const controls = p.locator(
+      'a[href]:visible,button:enabled:visible,input:enabled:visible,select:enabled:visible,textarea:enabled:visible',
+    );
+    const n = await controls.count();
+    await controls.evaluateAll((els) =>
+      els.forEach((el, i) => el.setAttribute('data-keyboard-id', String(i)))
+    );
+    await p.locator('body').click({ position: { x: 1, y: 1 } });
+    const seen = new Set<string>();
+    for (let i = 0; i < n * 4 && seen.size < n; i++) {
+      await p.keyboard.press('Tab');
+      const focused = p.locator(':focus');
+      // Native date-picker parts can temporarily own focus outside the document.
+      // Keep traversing; every page control still owes a named, visible-focus visit.
+      if (!await focused.count()) continue;
+      await expect(focused).toHaveAccessibleName(/\S/);
+      const css = await focused.evaluate((el) => ({
+        outline: getComputedStyle(el).outlineStyle,
+        width: parseFloat(getComputedStyle(el).outlineWidth),
+      }));
+      expect(css.outline).not.toBe('none');
+      expect(css.width).toBeGreaterThan(0);
+      const key = await focused.getAttribute('data-keyboard-id');
+      expect(key).not.toBeNull();
+      seen.add(key!);
+    }
+    expect(seen.size).toBe(n);
+  }
+  for (const route of routes) {
+    await page.goto(route);
+    await traverse(page);
+  }
+  const ctx = await browser.newContext();
+  const login = await ctx.newPage();
+  await login.goto('/login');
+  await traverse(login);
+  await ctx.close();
+});
+test('AC27 create and edit persist every search field', async ({ page }) => {
+  await page.goto('/buscas');
+  await page.getByRole('button', { name: 'Nova busca', exact: false }).click();
+  const form = page.locator('form.profile').first();
+  async function setForm(
+    name: string,
+    values: {
+      rooms: string;
+      suites: string;
+      minArea: string;
+      maxArea: string;
+      minPrice: string;
+      maxPrice: string;
+      neighborhoods: string;
+      elevator: boolean;
+      parking: boolean;
+      df: boolean;
+      wi: boolean;
+      enabled: boolean;
+    },
+  ) {
+    await form.getByLabel('Nome da busca').fill(name);
+    for (
+      const [label, value] of [
+        ['Bairros', values.neighborhoods],
+        ['Quartos', values.rooms],
+        ['Suítes mínimas', values.suites],
+        ['Área mínima', values.minArea],
+        ['Área máxima', values.maxArea],
+        ['Preço mínimo', values.minPrice],
+        ['Preço máximo', values.maxPrice],
+      ]
+    ) await form.getByLabel(label, { exact: true }).fill(value);
+    for (
+      const [label, value] of [
+        ['Exigir elevador', values.elevator],
+        ['Exigir vaga', values.parking],
+        ['DF Imóveis', values.df],
+        ['Wimoveis', values.wi],
+        ['Busca ativa', values.enabled],
+      ] as const
+    ) await form.getByLabel(label, { exact: true }).setChecked(value);
+    await form.getByRole('button', { name: 'Salvar busca' }).click();
+    await expect.poll(async () =>
+      Number(
+        (await sql`select count(*) from property_profile where name=${name}`)[0]
+          .count,
+      )
+    ).toBe(1);
+  }
+  const first = {
+    rooms: '2,3',
+    suites: '1',
+    minArea: '80',
+    maxArea: '160',
+    minPrice: '800000',
+    maxPrice: '1600000',
+    neighborhoods: 'asa-norte,asa-sul',
+    elevator: true,
+    parking: true,
+    df: true,
+    wi: false,
+    enabled: false,
+  };
+  await setForm('A nova busca', first);
+  await page.reload();
+  let [stored] =
+    await sql`select * from property_profile where name='A nova busca'`;
+  expect(stored).toMatchObject({
+    enabled: false,
+    providers: ['dfimoveis'],
+    params: {
+      neighborhoods: ['asa-norte', 'asa-sul'],
+      numberOfRooms: [2, 3],
+      numberOfSuites: 1,
+      minArea: 80,
+      maxArea: 160,
+      minPrice: 800000,
+      maxPrice: 1600000,
+      hasElevator: true,
+      hasParking: true,
+    },
+  });
+  const second = {
+    rooms: '4',
+    suites: '2',
+    minArea: '100',
+    maxArea: '200',
+    minPrice: '1000000',
+    maxPrice: '2000000',
+    neighborhoods: 'octogonal',
+    elevator: false,
+    parking: false,
+    df: false,
+    wi: true,
+    enabled: true,
+  };
+  await setForm('A busca editada', second);
+  await page.reload();
+  [stored] =
+    await sql`select * from property_profile where name='A busca editada'`;
+  expect(stored).toMatchObject({
+    enabled: true,
+    providers: ['wimoveis'],
+    params: {
+      neighborhoods: ['octogonal'],
+      numberOfRooms: [4],
+      numberOfSuites: 2,
+      minArea: 100,
+      maxArea: 200,
+      minPrice: 1000000,
+      maxPrice: 2000000,
+      hasElevator: false,
+      hasParking: false,
+    },
+  });
+  await expect(page.getByLabel('Nome da busca').first()).toHaveValue(
+    'A busca editada',
+  );
+});
+test('AC42 exact run order counts timestamps and email state are rendered separately', async ({ page }) => {
+  await sql`insert into property_run(kind,state,profiles,started_at,finished_at,email_state) values('collect','succeeded','[]','2020-01-01','2020-01-02','sent')`;
+  const [latest] =
+    await sql`insert into property_run(kind,state,profiles,started_at,finished_at,email_state) values('collect','partial','[]','2021-02-03T04:05:06Z','2021-02-03T05:06:07Z','failed') returning id`;
+  await sql`insert into property_source_run(run_id,source,count,outcome,error_category) values(${latest.id},'dfimoveis',7,'failed','blocked')`;
+  await page.goto('/execucoes');
+  const cards = page.locator('.runs>article');
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toContainText(latest.id);
+  await expect(cards.first()).toContainText(stamp('2021-02-03T04:05:06Z'));
+  await expect(cards.first()).toContainText(stamp('2021-02-03T05:06:07Z'));
+  await expect(cards.first()).toContainText('7 anúncios');
+  await expect(cards.first()).toContainText('blocked');
+  await expect(cards.first()).toContainText('Email: failed');
+  await expect(cards.last()).toContainText('Email: sent');
+});
+test('AC43 exact heartbeat threshold and displayed timestamp', async ({ page }) => {
+  const now = new Date('2026-01-08T12:00:00Z');
+  await page.clock.setFixedTime(now);
+  await sql`insert into property_heartbeat(singleton,seen_at) values(true,${new Date(
+    now.getTime() - 120000,
+  )})`;
+  await page.goto('/');
+  await expect(page.getByText('Online', { exact: true })).toBeVisible();
+  await expect(page.getByText('Visto em ' + stamp('2026-01-08T11:58:00Z')))
+    .toBeVisible();
+  await sql`update property_heartbeat set seen_at=${new Date(
+    now.getTime() - 120001,
+  )}`;
+  await page.reload();
+  await expect(page.getByText('Offline', { exact: true })).toBeVisible();
+  await expect(page.getByText('Visto em ' + stamp('2026-01-08T11:57:59.999Z')))
+    .toBeVisible();
+});
+async function comparisonFixture(n: number) {
+  await sql`truncate real_states cascade`;
+  await sql`insert into real_states(link,titulo,valor,price_cents,area,rooms,neighborhood,availability) values('https://portal.test/0','Apartamento 00','R$ 900.000',90000000,100,3,'asa-norte','active')`;
+  for (let i = 0; i < n; i++) {
+    await sql`insert into real_states(link,titulo,valor,price_cents,area,rooms,neighborhood,availability) values(${
+      'https://peer.test/' + i
+    },'Peer','x',${100000000 + i * 10000000},100,3,'asa-norte','active')`;
+  }
+  const claim = await admin.rpc('claim_property_run', { p_kind: 'collect' });
+  if (claim.error) throw claim.error;
+  const done = await admin.rpc('finish_property_run', {
+    p_run: claim.data.run_id,
+    p_token: claim.data.token,
+    p_state: 'succeeded',
+    p_email: 'not_needed',
+  });
+  if (done.error) throw done.error;
+}
+test('AC58 computed median count cohort and subject percentage render from real cohort', async ({ page }) => {
+  await comparisonFixture(5);
+  await page.goto(detail);
+  await expect(page.getByText('25.0% abaixo da mediana', { exact: true }))
+    .toBeVisible();
+  await expect(page.getByText(/12\.000,00\/m² · 5 anúncios/)).toBeVisible();
+  await expect(page.getByText('asa-norte · 3 quartos', { exact: true }))
+    .toBeVisible();
+});
+test('AC59 insufficient real cohort renders no discount or rank', async ({ page }) => {
+  await comparisonFixture(4);
+  await page.goto(detail);
+  await expect(page.getByText('Dados insuficientes')).toBeVisible();
+  await expect(page.locator('.price')).toHaveCount(0);
+  await page.goto(list);
+  await expect(page.locator('[data-listing]')).toHaveCount(5);
+  await expect(page.locator('.deal')).toHaveCount(0);
+});
+test('AC60 actual fixed comparison timestamp is displayed', async ({ page }) => {
+  await sql`update real_states set comparison_at='2020-01-02T03:04:05Z' where link='https://portal.test/0'`;
+  await page.goto(detail);
+  await expect(
+    page.getByText('Comparação calculada em ' + stamp('2020-01-02T03:04:05Z')),
+  ).toBeVisible();
+});
+test('AC61 opportunity ties stay canonically ordered across pages with null last', async ({ page }) => {
+  await sql`update real_states set discount_pct=10`;
+  await sql`update real_states set discount_pct=null where link='https://portal.test/0'`;
+  const expected = Array.from({ length: 34 }, (_, i) => i + 1).sort((a, b) =>
+    ('https://portal.test/' + a).localeCompare('https://portal.test/' + b)
+  ).map(titleFor).concat(titleFor(0));
+  await page.goto(list + '?sort=opportunity');
+  await expect(page.locator('[data-listing]')).toHaveCount(30);
+  expect(await titles(page)).toEqual(expected.slice(0, 30));
+  await page.goto(list + '?sort=opportunity&page=2');
+  await expect(page.locator('[data-listing]')).toHaveCount(5);
+  expect(await titles(page)).toEqual(expected.slice(30));
+});
+async function localWorker() {
+  const root = new URL('../..', import.meta.url).pathname;
+  const cwd = mkdtempSync(join(tmpdir(), 'property-browser-worker-'));
+  const child = spawn('rtk', [
+    'deno',
+    'run',
+    '-A',
+    '--config=' + root + 'deno.json',
+    '--preload=' + root + 'tests/cli_preload.ts',
+    root + 'src/worker.ts',
+  ], { cwd, env: { ...process.env, PROPERTY_TEST_MODE: 'success' } });
+  let output = '';
+  child.stdout.on('data', (d) => output += String(d));
+  child.stderr.on('data', (d) => output += String(d));
+  await expect.poll(() => output.match(/TEST_WORKER_PID=(\d+)/)?.[1], {
+    timeout: 15000,
+  }).toBeTruthy();
+  const pid = Number(output.match(/TEST_WORKER_PID=(\d+)/)![1]);
+  return {
+    stop: async () => {
+      const done = new Promise<void>((resolve) =>
+        child.once('exit', () => resolve())
+      );
+      process.kill(pid, 'SIGTERM');
+      await done;
+      rmSync(cwd, { recursive: true, force: true });
+    },
+  };
+}
+test('AC41 stopped worker queue and browser closure do not cancel durable work', async ({ page }) => {
+  let worker = await localWorker();
+  await expect.poll(async () =>
+    Number((await sql`select count(*) from property_heartbeat`)[0].count)
+  ).toBe(1);
+  await worker.stop();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Coletar agora', exact: false })
+    .click();
+  await expect.poll(async () =>
+    Number(
+      (await sql`select count(*) from property_request where state='queued'`)[0]
+        .count,
+    )
+  ).toBe(1);
+  await page.close();
+  expect((await sql`select state from property_request`)[0].state).toBe(
+    'queued',
+  );
+  worker = await localWorker();
+  try {
+    await expect.poll(
+      async () =>
+        Number(
+          (await sql`select count(*) from property_run where state='running'`)[
+            0
+          ].count,
+        ),
+      { timeout: 15000 },
+    ).toBe(1);
+    await expect.poll(
+      async () => (await sql`select state from property_request`)[0].state,
+      { timeout: 20000 },
+    ).toBe('succeeded');
+    expect(
+      Number(
+        (await sql`select count(*) from real_states where source in ('dfimoveis','wimoveis') and link not like 'https://portal.test/%'`)[
+          0
+        ].count,
+      ),
+    ).toBe(2);
+    expect(Number((await sql`select count(*) from property_run`)[0].count))
+      .toBe(1);
+  } finally {
+    await worker.stop();
+  }
+});
+
+test('AC09 inclusive centavo price bounds query integer storage', async ({ page }) => {
+  await sql`update real_states set price_cents=29 where link='https://portal.test/0'`;
+  await page.goto(list + '?minPrice=0.29&maxPrice=0.29');
+  await expect(page.locator('[data-listing]')).toHaveCount(1);
+  await expect(page.locator('[data-listing]')).toContainText('Apartamento 00');
 });

@@ -14,6 +14,14 @@ export function propertyStore(
     return data as T;
   }
   return {
+    activeRunId: async () => {
+      const { data, error } = await client.from('property_run').select('id').eq(
+        'state',
+        'running',
+      ).order('started_at', { ascending: false }).limit(1);
+      if (error) throw error;
+      return data?.[0]?.id ?? null;
+    },
     claim: async (kind) => {
       await call('seed_property_profile', {});
       return await call<Run | null>('claim_property_run', { p_kind: kind });

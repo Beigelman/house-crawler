@@ -253,4 +253,10 @@ Build notes: fixtures use the Postgres driver's JSON encoder to preserve JSON ob
 
 ## Author proof status
 
-C1–C64: implemented; individual named proofs passed in the author run. Database/worker: 38 tests; browser: 28 tests. Additional checks: strict plan gate, checks gate, Deno typecheck/lint, frontend production build, local Supabase security advisors, and desktop/mobile visual inspection. Independent verification is pending; this is not a completion verdict.
+All 64 checks: implemented; individual named proofs passed in the author run. Database/worker: 38 tests; browser: 28 tests. Additional checks: strict plan gate, checks gate, Deno typecheck/lint, frontend production build, local Supabase security advisors, and desktop/mobile visual inspection. Independent verification is pending; this is not a completion verdict.
+
+## Verification follow-up
+
+Round 1 at `2e6ad94` returned FAIL: stale persisted profile membership and run-wide new-listing email eligibility, plus incomplete boundary assertions. The original claims/proof selectors remain fixed. Supplementary tests now exercise actual magic links, populated authorization/mutation attempts, isolated legacy-schema migrations, complete UI values and ordering boundaries, real provider adapters, CLI subprocess exits, queue durability with stopped workers/browser closure, persisted diagnostics, and the existing email adapter. A centavo-bound regression additionally exposed binary-float multiplication at inclusive money bounds; shared decimal shifting now agrees with integer storage. The approved layout is retained (user: “Keep this layout”).
+
+The first independent report is preserved as `verification.round1.md`. Round 2 must rerun all proofs at the fix HEAD and reassess every previously unproven check; no author completion verdict replaces it.

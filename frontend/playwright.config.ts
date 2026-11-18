@@ -14,7 +14,11 @@ export default defineConfig({
   testDir: new URL('./tests', import.meta.url).pathname,
   fullyParallel: false,
   workers: 1,
-  use: { baseURL: 'http://127.0.0.1:5173', trace: 'retain-on-failure' },
+  use: {
+    baseURL: 'http://127.0.0.1:5173',
+    timezoneId: 'UTC',
+    trace: 'retain-on-failure',
+  },
   webServer: {
     cwd: new URL('.', import.meta.url).pathname,
     command: 'npm run dev',

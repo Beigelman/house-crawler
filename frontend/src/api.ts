@@ -1,3 +1,4 @@
+import { toCentavos } from '../../src/property/model.ts';
 import { createClient } from '@supabase/supabase-js';
 import type { Listing, Profile } from '../../src/property/model.ts';
 export const configured = Boolean(
@@ -46,7 +47,7 @@ export async function browse(params: URLSearchParams) {
   ) {
     const v = params.get(param);
     if (v !== null && v !== '' && Number.isFinite(Number(v))) {
-      q = q[op](col, Number(v) * factor);
+      q = q[op](col, factor === 100 ? toCentavos(Number(v)) : Number(v));
     }
   }
   if (params.get('q')) {

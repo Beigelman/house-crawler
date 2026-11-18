@@ -16,6 +16,8 @@ rtk npm --prefix frontend exec -- playwright test
 rtk deno task lint
 ```
 
+Os testes incluem callbacks reais do Auth local e processos CLI com `--preload` que substitui HTTP dos portais e Resend por respostas determinísticas. Esses processos usam um diretório temporário sem `.env` de produção.
+
 Execute as provas Deno e Playwright **sequencialmente**: compartilham os mesmos dados locais. Não carregue `.env` de produção nas provas. `supabase start` aplica a migração em um banco novo; para um banco local já iniciado, aplique o arquivo SQL em uma sessão local ou recrie somente esse ambiente descartável.
 
 Para desenvolvimento manual, copie `frontend/.env.example` para `frontend/.env.local` e preencha a URL/chave pública do projeto de desenvolvimento. `npm --prefix frontend run dev` abre a interface em localhost. Ela não contém credenciais de worker. Crie um usuário no Auth do ambiente de desenvolvimento e configure seu UUID como proprietário conforme abaixo; não use a identidade de teste em produção.

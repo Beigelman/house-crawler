@@ -43,11 +43,17 @@ export type Profile = {
   params: SearchParams;
   providers: string[];
 };
+// Shift the decimal representation before rounding, avoiding 0.29 * 100 < 29.
+export function toCentavos(value: number): number {
+  const [coefficient, exponent = '0'] = String(value).split('e');
+  return Math.round(Number(coefficient + 'e' + (Number(exponent) + 2)));
+}
 export function matchesProfile(p: Property, s: SearchParams): boolean {
   return p.neighborhood != null && s.neighborhoods.includes(p.neighborhood) &&
     p.rooms != null && s.numberOfRooms.includes(p.rooms) && p.area != null &&
     p.area >= s.minArea && p.area <= s.maxArea && p.price_cents != null &&
-    p.price_cents >= s.minPrice * 100 && p.price_cents <= s.maxPrice * 100 &&
+    p.price_cents >= toCentavos(s.minPrice) &&
+    p.price_cents <= toCentavos(s.maxPrice) &&
     (s.numberOfSuites === 0 ||
       (p.suites != null && p.suites >= s.numberOfSuites)) &&
     (!s.hasElevator || p.has_elevator === true) &&

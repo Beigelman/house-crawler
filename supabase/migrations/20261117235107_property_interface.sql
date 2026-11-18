@@ -140,8 +140,18 @@ begin
  perform private.assert_property_lease(p_run,p_token);
  update private.property_lease set expires_at=clock_timestamp()+interval '120 seconds' where singleton;
 end $$;
+create or replace function private.property_matches(x jsonb,p jsonb) returns boolean language sql immutable set search_path='' as $$
+ select coalesce(
+  (p->'neighborhoods') ? (x->>'neighborhood')
+  and (p->'numberOfRooms') @> jsonb_build_array(x->'rooms')
+  and (x->>'area')::numeric between (p->>'minArea')::numeric and (p->>'maxArea')::numeric
+  and (x->>'price_cents')::bigint between round((p->>'minPrice')::numeric*100) and round((p->>'maxPrice')::numeric*100)
+  and ((p->>'numberOfSuites')::integer=0 or (x->>'suites')::integer>=(p->>'numberOfSuites')::integer)
+  and (not (p->>'hasElevator')::boolean or (x->>'has_elevator')::boolean)
+  and (not (p->>'hasParking')::boolean or (x->>'has_parking')::boolean),false)
+$$;
 create or replace function public.save_property_batch(p_run uuid,p_token bigint,p_items jsonb,p_profile uuid default null) returns jsonb language plpgsql set search_path='' as $$
-declare x jsonb; old public.real_states; new_price bigint; news jsonb:='[]'::jsonb;
+declare x jsonb; old public.real_states; new_price bigint; news jsonb:='[]'::jsonb; selected_params jsonb;
 begin
  perform private.assert_property_lease(p_run,p_token);
  for x in select jsonb_array_elements(p_items) loop
@@ -157,7 +167,14 @@ begin
   if new_price is not null and new_price is distinct from old.price_cents then
    insert into public.property_price(listing_link,run_id,price_cents) values(x->>'link',p_run,new_price) on conflict(run_id,listing_link) do nothing;
   end if;
-  if p_profile is not null then insert into public.property_match(profile_id,listing_link) values(p_profile,x->>'link') on conflict do nothing; end if;
+  -- Reconcile only observed identities; disappearance from a search is not removal.
+  delete from public.property_match m using public.property_profile p where m.listing_link=x->>'link' and m.profile_id=p.id
+   and not private.property_matches(x,coalesce((select snap->'params' from public.property_run r,jsonb_array_elements(r.profiles) snap where r.id=p_run and snap->>'id'=p.id::text),p.params));
+  if p_profile is not null then
+   select snap->'params' into selected_params from public.property_run r,jsonb_array_elements(r.profiles) snap where r.id=p_run and snap->>'id'=p_profile::text;
+   if selected_params is null then raise sqlstate '22023' using message='Profile not in run snapshot'; end if;
+   if private.property_matches(x,selected_params) then insert into public.property_match(profile_id,listing_link) values(p_profile,x->>'link') on conflict do nothing; end if;
+  end if;
  end loop;
  return news;
 end $$;

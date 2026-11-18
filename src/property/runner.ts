@@ -6,6 +6,7 @@ export type Run = {
   profiles: Profile[];
 };
 export interface Store {
+  activeRunId?(): Promise<string | null>;
   claim(kind: string): Promise<Run | null>;
   renew(run: Run): Promise<unknown>;
   save(
@@ -51,6 +52,8 @@ export function sanitizeDiagnostic(e: unknown): string {
     ? 'blocked'
     : /timeout|timed out/i.test(s)
     ? 'timeout'
+    : /database/i.test(s)
+    ? 'database'
     : /network|fetch/i.test(s)
     ? 'network'
     : /HTTP/.test(s)
@@ -64,10 +67,15 @@ export const exitCode = (state: string) =>
 export async function executeRun(kind: string, deps: Dependencies) {
   const run = await deps.store.claim(kind);
   if (!run) {
+    const activeId = kind === 'worker'
+      ? null
+      : await deps.store.activeRunId?.() ?? null;
     return {
-      run_id: null,
+      run_id: activeId,
       state: kind === 'worker' ? 'idle' : 'busy',
-      summary: 'Coletor ocupado; execução não iniciada',
+      summary: kind === 'worker'
+        ? 'Coletor ocioso'
+        : `Execução ${activeId ?? 'não iniciada'}: busy`,
     };
   }
   const controller = new AbortController();
@@ -81,7 +89,11 @@ export async function executeRun(kind: string, deps: Dependencies) {
     });
   }, 30000);
   let successes = 0, failures = 0;
-  const news = new Map<string, Property>();
+  const newLinks = new Set<string>();
+  const observations = new Map<
+    string,
+    { property: Property; sources: Set<string> }
+  >();
   let email = 'not_needed';
   try {
     if (run.kind === 'validate') {
@@ -158,13 +170,17 @@ export async function executeRun(kind: string, deps: Dependencies) {
             if (outcome.outcome === 'partial') failures++;
           }
           if (outcome.outcome !== 'failed') {
-            const fresh = await deps.store.save(run, outcome.properties, null);
-            const matched = outcome.properties.filter((p) =>
-              matchesProfile(p, profile.params)
+            const fresh = await deps.store.save(
+              run,
+              outcome.properties,
+              profile.id,
             );
-            await deps.store.save(run, matched, profile.id);
-            for (const p of fresh) {
-              if (matchesProfile(p, profile.params)) news.set(p.link, p);
+            for (const p of fresh) newLinks.add(p.link);
+            for (const p of outcome.properties) {
+              const sources = observations.get(p.link)?.sources ??
+                new Set<string>();
+              sources.add(source);
+              observations.set(p.link, { property: p, sources });
             }
           }
           await deps.store.source(run, {
@@ -177,11 +193,20 @@ export async function executeRun(kind: string, deps: Dependencies) {
         }
       }
     }
-    if (news.size) {
+    const news = [...newLinks].flatMap((link) => {
+      const observed = observations.get(link)!;
+      return run.profiles.some((profile) =>
+          profile.providers.some((source) => observed.sources.has(source)) &&
+          matchesProfile(observed.property, profile.params)
+        )
+        ? [observed.property]
+        : [];
+    });
+    if (news.length) {
       if (controller.signal.aborted) throw controller.signal.reason;
       await deps.store.renew(run);
       try {
-        const result = await deps.sendEmail([...news.values()]);
+        const result = await deps.sendEmail(news);
         email = result.success ? 'sent' : 'failed';
       } catch {
         email = 'failed';
