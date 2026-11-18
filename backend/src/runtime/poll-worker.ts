@@ -1,0 +1,30 @@
+import type { Dependencies } from '../property/ports.ts';
+import { executeRun } from '../property/application/execute-run.ts';
+import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
+export async function pollWorker(
+  deps: Dependencies & {
+    sleep?: (ms: number) => Promise<void>;
+    shouldStop?: () => boolean;
+  },
+) {
+  const sleep = deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  while (!deps.shouldStop?.()) {
+    try {
+      await deps.store.heartbeat();
+      try {
+        const scheduled = await deps.schedule?.();
+        if (scheduled?.outcome === 'accepted') {
+          console.log(`Coleta agendada: ${scheduled.scheduled_at}`);
+        }
+      } catch (e) {
+        // An unavailable scheduler must not prevent manual queue processing.
+        console.error('Erro do agendamento:', sanitizeDiagnostic(e));
+      }
+      const r = await executeRun('worker', deps);
+      if (r.state !== 'idle') console.log(r.summary);
+    } catch (e) {
+      console.error('Erro do coletor:', sanitizeDiagnostic(e));
+    }
+    if (!deps.shouldStop?.()) await sleep(30000);
+  }
+}

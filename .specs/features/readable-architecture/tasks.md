@@ -51,7 +51,7 @@ Where: backend/src/property/application/, backend/src/runtime/
 Tests: existing worker/schedule/fencing assertions
 Gate: Full
 Done when: ARCH-03 passes with separate flows and explicit composition.
-Status: pending
+Status: complete
 
 ### T5: Consolidate formatting tests styles and documentation
 Depends on: T4

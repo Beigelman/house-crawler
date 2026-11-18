@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as local from './local.ts';
 import { propertyStore } from '../backend/src/property/persistence/supabase-property-store.ts';
-import { pollWorker } from '../backend/src/property/runner.ts';
+import { pollWorker } from '../backend/src/runtime/poll-worker.ts';
 
 Deno.test('SCHED-01 Brasília slots include exact boundaries and midnight catch-up', async () => {
   const cases = [

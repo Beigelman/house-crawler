@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { pollWorker } from '../backend/src/property/runner.ts';
+import { pollWorker } from '../backend/src/runtime/poll-worker.ts';
 import { type Store } from '../backend/src/property/ports.ts';
 
 for (const schedulerFails of [false, true]) {

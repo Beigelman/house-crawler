@@ -2,11 +2,9 @@
 // Async provider/store doubles implement the production promise boundary.
 import assert from 'node:assert/strict';
 import type { Property } from '../shared/property.ts';
-import {
-  executeRun,
-  exitCode,
-  pollWorker,
-} from '../backend/src/property/runner.ts';
+import { executeRun } from '../backend/src/property/application/execute-run.ts';
+import { exitCode } from '../backend/src/runtime/exit-code.ts';
+import { pollWorker } from '../backend/src/runtime/poll-worker.ts';
 import { sanitizeDiagnostic } from '../backend/src/platform/diagnostics.ts';
 import { matchesProfile } from '../backend/src/property/domain/matches-profile.ts';
 import {
