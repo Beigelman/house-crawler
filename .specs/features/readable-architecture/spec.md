@@ -31,10 +31,10 @@ Acceptance Criteria:
 
 ## Requirement Traceability
 
-| ID      | Acceptance | Evidence                                     | Status       |
-| ------- | ---------- | -------------------------------------------- | ------------ |
-| ARCH-01 | 1          | Deno tasks and CLI integration               | implementing |
-| ARCH-02 | 2          | Browser suite and frontend build             | implementing |
-| ARCH-03 | 3          | Worker and schedule tests                    | implementing |
-| ARCH-04 | 4          | Typecheck and dependency inspection          | implementing |
-| ARCH-05 | 5          | Migration hashes, test counts and formatting | implementing |
+| ID      | Acceptance | Evidence                                     | Status   |
+| ------- | ---------- | -------------------------------------------- | -------- |
+| ARCH-01 | 1          | Deno tasks and CLI integration               | verified |
+| ARCH-02 | 2          | Browser suite and frontend build             | verified |
+| ARCH-03 | 3          | Worker and schedule tests                    | verified |
+| ARCH-04 | 4          | Typecheck and dependency inspection          | verified |
+| ARCH-05 | 5          | Migration hashes, test counts and formatting | verified |

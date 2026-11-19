@@ -4,20 +4,31 @@ Project decisions remain authoritative in [project/STATE.md](project/STATE.md); 
 
 ## Handoff
 
-**Feature**: property-interface
+**Feature**: readable-architecture
 
-**Where**: COMPLETE for local delivery. Independent round 3 passed all 64 frozen checks at implementation commit `8e6babedab9a95ae0a7b1954d8b3c7570d37fa3e`; completion gate exits 0 with zero errors/warnings.
+**Where**: COMPLETE for local delivery. Approved proposal implemented with
+backend/src, backend/supabase, pure shared contracts and feature-organized React.
+Independent verification passed at implementation commit `00d1c86`.
 
-**Evidence**: 67 Deno database/worker tests (including three nested single-browser proofs), 48 standalone browser tests, production build, Deno typecheck/lint, and local Supabase security advisors pass. Report: `features/property-interface/verification.md`; earlier findings remain in `verification.round1.md` and `verification.round2.md`.
+**Evidence**: 75 Deno tests (15 unit + 60 integration), 48 browser tests, build,
+Deno typecheck, lint and formatting passed. Both migration files and generated
+database types match the original bytes. All four dashboard/listing screenshots
+at 375px/1440px match the pre-CSS-split baseline byte for byte. Independent
+Verifier killed three behavior mutants in isolated scratch copies.
+Report: `features/readable-architecture/validation.md`.
 
 **In progress**: None.
 
-**Next step**: Production rollout only when explicitly authorized, following `docs/property-interface.md`: inventory/apply migration, configure owner/Auth redirects and server-only worker credentials, deploy the static frontend, install worker supervision, and smoke-test portals on the actual host.
+**Next step**: Use `docs/architecture.md` and `docs/database.md` to navigate the
+codebase. Existing Deno task names run from the root. Supabase commands use
+`--workdir backend`. No deployment or production database operation was performed.
 
-**Blockers**: None for the verified local implementation. Production host, credentials, Auth configuration and live portal reachability are deployment inputs; no production rollout is claimed.
+**Blockers**: None for local delivery.
 
-**Uncommitted**: Existing flight/codebase/project specification directories predate this feature and remain separate. Their existing project decision log holds approved AD-004–006; unrelated specification files were not staged.
+**Uncommitted**: Preexisting provider request-header edits were preserved in
+backend/src/property/providers/base-property-provider.ts and df-imoveis.ts.
+Preexisting frontend/package-lock.json deletion, frontend/pnpm-lock.yaml and
+.specs/codebase, .specs/project and .specs/features/flight-search remain outside
+these commits.
 
 **Branch**: main
-
-**Profile**: light. No faults injected. User approved keeping the displayed layout. Final documentary commits record verification; implementation remains the reviewed `8e6babe` code.
