@@ -375,6 +375,7 @@ export type Database = {
       finish_crawl_job: {
         Args: {
           p_email: string;
+          p_error?: string;
           p_job: string;
           p_state: string;
           p_token: number;

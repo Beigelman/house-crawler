@@ -38,7 +38,12 @@ export interface Store {
       error_category: string | null;
     },
   ): Promise<unknown>;
-  finish(run: CrawlJob, state: JobState, email: EmailState): Promise<unknown>;
+  finish(
+    run: CrawlJob,
+    state: JobState,
+    email: EmailState,
+    error?: string,
+  ): Promise<unknown>;
   listings(): Promise<ScrapedListing[]>;
   heartbeat(): Promise<unknown>;
 }

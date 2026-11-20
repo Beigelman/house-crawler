@@ -298,12 +298,12 @@ begin
   insert into public.crawl_source_runs(job_id,source,search_id,count,outcome,error_category) values(p_job,
     p_source,p_search,p_count,p_outcome,p_error);
 end $$;
-create function public.finish_crawl_job(p_job uuid,p_token bigint,p_state text,p_email text) returns void
+create function public.finish_crawl_job(p_job uuid,p_token bigint,p_state text,p_email text,p_error text default null) returns void
 language plpgsql set search_path = '' as $$
 begin
   perform private.assert_worker_lease(p_job,p_token);
   if p_state not in ('succeeded','partial','failed') then raise sqlstate '22023'; end if;
-  update public.crawl_jobs set state=p_state,email_state=p_email,finished_at=clock_timestamp() where id=p_job;
+  update public.crawl_jobs set state=p_state,email_state=p_email,error_category=p_error,finished_at=clock_timestamp() where id=p_job;
   update private.worker_state set job_id=null,lease_expires_at='-infinity' where singleton;
 end $$;
 

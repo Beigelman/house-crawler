@@ -495,3 +495,22 @@ async function matchingListings() {
     searches.some((s) => matchesProfile(row as ScrapedListing, s.params))
   ).length;
 }
+
+boundary(
+  'MODEL11 unexpected persistence failure finalizes the job and releases its lease',
+  async () => {
+    const deps = realDeps([{ ...listing, price_cents: -1 }]);
+    await assert.rejects(() => executeRun('collect', deps), /23514/);
+    const [job] = await local.sql`select * from crawl_jobs`;
+    assert.equal(job.state, 'failed');
+    assert.equal(job.email_state, 'not_needed');
+    assert.equal(job.error_category, 'database');
+    assert.ok(job.finished_at);
+    const [worker] = await local
+      .sql`select *, lease_expires_at='-infinity'::timestamptz as released from private.worker_state`;
+    assert.equal(worker.job_id, null);
+    assert.equal(worker.released, true);
+    assert.equal((await local.sql`select * from crawl_source_runs`).length, 0);
+    assert.equal((await local.sql`select * from listings`).length, 0);
+  },
+);

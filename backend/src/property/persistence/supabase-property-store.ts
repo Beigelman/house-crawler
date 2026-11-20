@@ -52,12 +52,13 @@ export function propertyStore(
         p_outcome: v.outcome,
         p_error: v.error_category,
       }),
-    finish: (r, state, email) =>
+    finish: (r, state, email, error) =>
       call('finish_crawl_job', {
         p_job: r.job_id,
         p_token: r.token,
         p_state: state,
         p_email: email,
+        p_error: error ?? null,
       }),
     listings: async () => {
       const all: ScrapedListing[] = [];

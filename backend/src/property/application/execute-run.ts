@@ -58,14 +58,7 @@ export async function executeRun(
   } catch (e) {
     if (!controller.signal.aborted) {
       try {
-        await deps.store.source(run, {
-          source: 'system',
-          search_id: null,
-          count: 0,
-          outcome: 'failed',
-          error_category: sanitizeDiagnostic(e),
-        });
-        await deps.store.finish(run, 'failed', email);
+        await deps.store.finish(run, 'failed', email, sanitizeDiagnostic(e));
       } catch { /* Lost leases cannot commit diagnostic writes. */ }
     }
     throw e;

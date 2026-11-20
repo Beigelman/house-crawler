@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 9,
+  "next_id": 10,
   "lessons": [
     {
       "id": "L-001",
@@ -148,6 +148,24 @@
       ],
       "created": "2026-11-18T22:53:38Z",
       "last_seen": "2026-11-18T22:53:38Z"
+    },
+    {
+      "id": "L-009",
+      "key": "ac_gap::exercise unexpected worker exceptions through the real persistence adapter and assert terminal job state diagnostic category and lease release",
+      "text": "Exercise unexpected worker exceptions through the real persistence adapter and assert terminal job state, diagnostic category and lease release.",
+      "signal": "ac_gap",
+      "scope": "worker",
+      "status": "candidate",
+      "features": [
+        "listings-model"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        ".specs/features/listings-model/validation.md: finding 1; backend/src/property/application/execute-run.ts:61 (worker)"
+      ],
+      "created": "2026-11-20T10:35:55Z",
+      "last_seen": "2026-11-20T10:35:55Z"
     }
   ]
 }

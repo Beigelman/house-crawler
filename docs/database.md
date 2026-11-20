@@ -35,11 +35,11 @@ Não existem colunas legadas `titulo`/`valor`, flags de importação nem tabela 
 | `renew_worker_lease` | Renova somente o token/job atual |
 | `save_listing_batch` | Atualiza observações e anexa mudanças de preço na mesma transação |
 | `record_crawl_source` | Registra o resultado da fonte com lease válido |
-| `finish_crawl_job` | Finaliza o job e resultado de email, liberando o lease |
+| `finish_crawl_job` | Finaliza o job, resultado de email e diagnóstico geral sanitizado, liberando o lease |
 | `record_worker_heartbeat` | Atualiza a saúde com relógio do banco |
 | `worker_health` | Retorna apenas o heartbeat para o proprietário, sem expor o token |
 
-O lease é renovado a cada 30 segundos e expira após 120 segundos. Claim, enqueue manual e agendado são serializados no banco. Uma CLI direta não ultrapassa um job já enfileirado. Todos os caminhos de escrita do worker validam o fencing token. Um job corresponde a uma tentativa; não há retentativa automática.
+O lease é renovado a cada 30 segundos e expira após 120 segundos. Claim, enqueue manual e agendado são serializados no banco. Uma CLI direta não ultrapassa um job já enfileirado. Todos os caminhos de escrita do worker validam o fencing token. Falhas gerais ficam em `crawl_jobs.error_category`; resultados por fonte aceitam apenas portais reais. Um job corresponde a uma tentativa; não há retentativa automática.
 
 Ausência numa busca não confirma remoção. 403, timeout e falha de parser preservam a disponibilidade confirmada. Remoção mantém notas e preços. Preço desconhecido preserva o último preço e seu timestamp. Verificar apenas a disponibilidade também preserva o timestamp da observação de preço. Atributos desconhecidos não apagam valores conhecidos. Mudanças reais de preço dentro do mesmo job também são mantidas; observações repetidas sem mudança não criam linhas.
 

@@ -12,6 +12,7 @@ Replace the legacy schema with the agreed fresh-install model. The user approved
 - WHEN a saved search is written, THE SYSTEM SHALL validate typed criteria and preserve current form behavior, including false meaning no amenity requirement.
 - WHEN a manual or scheduled collection is queued, THE SYSTEM SHALL persist one idempotent job, enforce the existing rate limit and one-active-job invariant, and capture immutable search settings at claim time.
 - WHEN a lease expires or changes owner, THE SYSTEM SHALL reject every stale write and interrupt the previous job before takeover.
+- WHEN an unexpected worker failure occurs while its lease is valid, THE SYSTEM SHALL mark the job failed, store a sanitized job diagnostic, and release its lease.
 ### REQ-003: Access and presentation
 - WHEN a non-owner accesses application data or worker RPCs, THE SYSTEM SHALL deny access.
 - WHEN the frontend displays listings, marks, history, searches, jobs or worker health, THE SYSTEM SHALL use the new schema and preserve existing user workflows.

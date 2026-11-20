@@ -62,6 +62,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: .specs/features/worker-schedule/validation.md: historical LIMIT 1 mutant (worker)
 - last seen: 2026-11-18T22:53:38Z
 
+### L-009 - Exercise unexpected worker exceptions through the real persistence adapter and assert terminal job state, diagnostic category and lease release.
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `worker` · harmful: 0
+- features: listings-model
+- evidence: .specs/features/listings-model/validation.md: finding 1; backend/src/property/application/execute-run.ts:61 (worker)
+- last seen: 2026-11-20T10:35:55Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

@@ -28,3 +28,8 @@ Implementation complete. Local behavioral gates pass across the full regression 
 ## Preservation of existing work
 
 Provider request headers, hourly worker polling and heartbeat edits, their unit test, package-lock changes and unrelated specs existed before this task. Their working-tree content is retained; the refactor commit excludes those existing edits.
+
+
+## Independent review fix
+
+Completed: unexpected persistence failures now use the fenced finish RPC to store a sanitized diagnostic on `crawl_jobs`, mark the job failed and release its lease. Portal result rows remain portal-only. MODEL11 used a real negative-price observation and failed before the fix (`running` instead of `failed`), then passed with exact failed state, `database` category, completion timestamp, cleared job/lease and no synthetic source row. The other 26 unit/worker regressions pass; type check, build, lint and formatting pass. The independent verifier passed the original 79-test gate and will rerun the final 80-test suite after this fix. Round-one findings are retained in `validation.round1.md`.
