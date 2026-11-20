@@ -10,11 +10,11 @@ One atomic database-contract refactor covers the baseline, shared objects, backe
 | REQ-002 | AC28 asserts invalid typed writes leave the complete row unchanged; AC30 asserts the original search name in the claim snapshot. AC32–40 assert durable identity, replay, rate limits, exclusivity and interruption. AC39 asserts every stale mutation returns 400 and leaves stored data unchanged. Schedule integration tests assert exact Brasília boundaries and one durable scheduled job. MODEL09 asserts one seed under concurrency; MODEL10 asserts a queued job keeps its ID through claim. |
 | REQ-003 | AC03 asserts non-owner reads/writes/RPCs fail without data mutation. MODEL07 asserts health access and private-state isolation. AC58–62 assert eligible subject-excluded medians and live comparison timestamps. Browser tests assert login, filters, marks, history, saved searches, job outcomes, worker health and mobile/keyboard operation. |
 
-Tests were ported to the new database contract. Legacy upgrade/parser tests were replaced with fresh-install, identity and observation tests because the approved baseline has no legacy data path. Persisted-match tests now evaluate current criteria without a match table. Comparison tests use real cohort inputs rather than writing derived columns. The 15 unit tests and 60 existing integration scenarios remain represented, with four new model regressions added.
+Tests were ported to the new database contract. Legacy upgrade/parser tests were replaced with fresh-install, identity and observation tests because the approved baseline has no legacy data path. Persisted-match tests now evaluate current criteria without a match table. Comparison tests use real cohort inputs rather than writing derived columns. The 15 unit tests and 60 existing integration scenarios remain represented, with five new model regressions added (80 total Deno tests).
 
 ## Status
 
-Implementation complete. Local behavioral gates pass across the full regression run plus the corrected seed assertion. All 48 browser checks pass. Independent verification follows the implementation commit.
+Complete. Independent verification of implementation `9f52c3e` plus fix `d398263` passes all 13 spec outcomes, all 80 Deno tests and all 48 browser tests. Four isolated behavior mutations are killed. See `validation.md`.
 
 ## Local checks
 
@@ -22,7 +22,7 @@ Implementation complete. Local behavioral gates pass across the full regression 
 - SQL lint: no schema errors. Security/performance advisors: no issues.
 - Deno type checking, lint and formatting pass.
 - Frontend TypeScript/Vite production build passes; existing bundle-size warning remains.
-- Deno regression coverage: 78 passed in the full run; corrected MODEL09 HTTP expectation (void RPC returns 204) passes in isolation. Independent verifier reruns the final full suite.
+- Deno regression coverage: independent final full suite passes 80/80; the void seed RPC is asserted to return HTTP 204.
 - Browser regression run and independent validation are recorded in `validation.md`.
 
 ## Preservation of existing work
@@ -32,4 +32,4 @@ Provider request headers, hourly worker polling and heartbeat edits, their unit 
 
 ## Independent review fix
 
-Completed: unexpected persistence failures now use the fenced finish RPC to store a sanitized diagnostic on `crawl_jobs`, mark the job failed and release its lease. Portal result rows remain portal-only. MODEL11 used a real negative-price observation and failed before the fix (`running` instead of `failed`), then passed with exact failed state, `database` category, completion timestamp, cleared job/lease and no synthetic source row. The other 26 unit/worker regressions pass; type check, build, lint and formatting pass. The independent verifier passed the original 79-test gate and will rerun the final 80-test suite after this fix. Round-one findings are retained in `validation.round1.md`.
+Completed: unexpected persistence failures now use the fenced finish RPC to store a sanitized diagnostic on `crawl_jobs`, mark the job failed and release its lease. Portal result rows remain portal-only. MODEL11 used a real negative-price observation and failed before the fix (`running` instead of `failed`), then passed with exact failed state, `database` category, completion timestamp, cleared job/lease and no synthetic source row. The other 26 unit/worker regressions pass; type check, build, lint and formatting pass. The independent verifier passes the final 80-test suite, repeats all 48 browser tests, and verifies post-takeover stale-finish denial and exact RPC grants. Round-one findings are retained in `validation.round1.md`.

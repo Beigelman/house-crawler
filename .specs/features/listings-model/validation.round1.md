@@ -4,10 +4,10 @@
 
 **Verdict**: FAIL. Unexpected persistence errors leave a job running because the error handler writes a forbidden source value before finalizing the job.
 
-**Date:** 2026-11-20  
-**Spec:** `.specs/features/listings-model/spec.md`  
-**Diff range:** `9f52c3e^..9f52c3e`, with the preserved working-tree edits present during execution  
-**Verifier:** independent sub-agent; implementation author and verifier are different agents  
+**Date:** 2026-11-20
+**Spec:** `.specs/features/listings-model/spec.md`
+**Diff range:** `9f52c3e^..9f52c3e`, with the preserved working-tree edits present during execution
+**Verifier:** independent sub-agent; implementation author and verifier are different agents
 **Round:** 1
 
 ## Ranked finding and fix plan

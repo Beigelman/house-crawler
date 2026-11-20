@@ -46,3 +46,7 @@ As the owner, I can browse, annotate and track listing prices, edit saved search
 | REQ-001 | database and worker integration tests; listing browser tests |
 | REQ-002 | database, worker and schedule integration tests; search browser tests |
 | REQ-003 | access integration tests; frontend browser tests |
+
+## Status
+
+Complete locally. Independent validation passes all 13 outcomes; see [validation.md](validation.md).
