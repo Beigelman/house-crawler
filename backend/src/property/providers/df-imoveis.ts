@@ -8,6 +8,11 @@ import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './html-utils.ts';
 export class DfImoveisProvider extends PropertyProvider {
   private static readonly maxListingPages = 20;
   protected baseUrl: string;
+  // Use the HTTP client's own user agent rather than claiming to be Chrome.
+  protected override requestHeaders: HeadersInit = {
+    'Accept': 'text/html,application/xhtml+xml',
+    'Accept-Language': 'pt-BR,pt;q=0.9',
+  };
 
   constructor(searchParams: SearchParams, signal?: AbortSignal) {
     super('DF Imóveis', searchParams, signal);

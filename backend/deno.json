@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/denoland/deno/main/cli/schemas/config-file.v1.json",
+  "compilerOptions": {
+    "strict": true
+  },
+  "tasks": {
+    "run": "deno run --allow-net --allow-write --allow-env --allow-read src/search_properties.ts",
+    "validate": "deno run --allow-net --allow-write --allow-env --allow-read src/validate_properties.ts",
+    "lint": "deno lint . ../shared ../frontend",
+    "fmt": "deno fmt --config deno.json src ../shared ../frontend/src tests",
+    "worker": "deno run --allow-net --allow-env --allow-read src/worker.ts",
+    "test": "deno test -A tests/",
+    "check": "deno check src/search_properties.ts src/validate_properties.ts src/worker.ts",
+    "test:unit": "deno test -A tests/unit/",
+    "test:integration": "deno test -A tests/integration/",
+    "fmt:check": "deno fmt --config deno.json --check src ../shared ../frontend/src tests"
+  },
+  "imports": {
+    "cheerio": "npm:cheerio@^1.1.2",
+    "@std/async": "jsr:@std/async@^1",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.119.0",
+    "resend": "npm:resend@^4",
+    "postgres": "npm:postgres@4.1.1"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "singleQuote": true,
+    "proseWrap": "preserve"
+  },
+  "exclude": [
+    "../frontend/node_modules",
+    "../frontend/dist",
+    "../frontend/test-results",
+    "../frontend/playwright-report"
+  ]
+}

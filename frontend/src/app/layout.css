@@ -137,7 +137,8 @@ footer span {
     border-right: 0;
     border-bottom: 1px solid #e0e6db;
   }
-  aside .eyebrow, .sidebar-bottom {
+  aside .eyebrow,
+  .sidebar-bottom {
     display: none;
   }
   .shell {

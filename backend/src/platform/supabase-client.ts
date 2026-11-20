@@ -8,14 +8,24 @@ export function getSupabaseClient(): SupabaseClient<Database> {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const supabaseKey = Deno.env.get('SUPABASE_SECRET_KEY');
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      'Variáveis de ambiente SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórias',
+      'Variáveis de ambiente SUPABASE_URL e SUPABASE_SECRET_KEY são obrigatórias',
     );
   }
 
-  supabaseClient = createClient<Database>(supabaseUrl, supabaseKey);
+  if (!supabaseKey.startsWith('sb_secret_')) {
+    throw new Error('SUPABASE_SECRET_KEY deve ser uma chave sb_secret_...');
+  }
+
+  supabaseClient = createClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
   return supabaseClient;
 }

@@ -21,7 +21,7 @@ const pid = '33333333-3333-4333-8333-333333333333';
 const api = createClient(c.API_URL, c.ANON_KEY, {
   auth: { persistSession: false },
 });
-const admin = createClient(c.API_URL, c.SERVICE_ROLE_KEY, {
+const admin = createClient(c.API_URL, c.SECRET_KEY, {
   auth: { persistSession: false },
 });
 const params = {
@@ -139,8 +139,8 @@ test('AC04 build bundle contains zero worker secrets', () => {
       new URL('../dist/assets/' + f, import.meta.url),
       'utf8',
     );
-    expect(text).not.toContain(c.SERVICE_ROLE_KEY);
-    expect(text).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
+    expect(text).not.toContain(c.SECRET_KEY);
+    expect(text).not.toContain('SUPABASE_SECRET_KEY');
     expect(text).not.toContain('RESEND_API_KEY');
   }
 });
@@ -484,7 +484,7 @@ test('AC01 actual local magic links complete requested and default callbacks', a
 });
 test('AC04 harmless server-secret build sentinels stay out of every emitted asset', () => {
   const secrets = {
-    SUPABASE_SERVICE_ROLE_KEY: 'server-secret-sentinel-never-public',
+    SUPABASE_SECRET_KEY: 'server-secret-sentinel-never-public',
     RESEND_API_KEY: 'resend-secret-sentinel-never-public',
   };
   execFileSync('rtk', ['npm', '--prefix', 'frontend', 'run', 'build'], {
@@ -980,8 +980,8 @@ async function localWorker() {
     'deno',
     'run',
     '-A',
-    '--config=' + root + 'deno.json',
-    '--preload=' + root + 'tests/support/cli_preload.ts',
+    '--config=' + root + 'backend/deno.json',
+    '--preload=' + root + 'backend/tests/support/cli_preload.ts',
     root + 'backend/src/worker.ts',
   ], { cwd, env: { ...process.env, PROPERTY_TEST_MODE: 'success' } });
   let output = '';

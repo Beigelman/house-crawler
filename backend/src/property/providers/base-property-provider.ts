@@ -36,6 +36,7 @@ const HEADERS = {
 export abstract class PropertyProvider {
   public name: string;
   protected searchParams: SearchParams;
+  protected requestHeaders: HeadersInit = HEADERS;
 
   constructor(
     name: string,
@@ -129,7 +130,7 @@ export abstract class PropertyProvider {
    */
   protected async getDocument(url: string): Promise<CheerioAPI> {
     const response = await fetchWithRetry(url, {
-      headers: HEADERS,
+      headers: this.requestHeaders,
       signal: this.signal,
     });
     const html = await response.text();

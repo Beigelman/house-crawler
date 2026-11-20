@@ -20,6 +20,12 @@ backend/
       ports.ts           # Contratos usados pelos casos de uso
     platform/            # HTTP, diagnósticos, cliente de banco e robots.txt
   supabase/              # Configuração local e migrations versionadas
+  tests/                 # Unitários, integração, suporte e fixtures
+  scripts/               # Execução e supervisão no host
+  deno.json              # Tarefas, dependências e formatação Deno
+  deno.lock              # Lockfile do backend
+  .env.example           # Modelo do ambiente do worker
+  Makefile               # Atalhos de execução e logs
 frontend/
   src/
     app/                 # Composição, rotas e layout
@@ -29,8 +35,6 @@ frontend/
     styles/              # Estilos globais e tokens
   tests/                 # Fluxos no navegador
 shared/                  # Contratos, conversão monetária e tipos gerados
-tests/                  # Unitários, integração, suporte e fixtures
-scripts/                 # Execução e supervisão no host
 ```
 
 Comece pelo [mapa de arquitetura](docs/architecture.md). As regras de persistência
@@ -40,7 +44,9 @@ estão no [mapa do banco](docs/database.md), e a instalação completa está no
 ## Desenvolvimento
 
 Requer Deno, Node, pnpm, Docker e Supabase CLI. Execute os comandos na raiz do
-repositório. O arquivo `deno.json`, o `deno.lock` e o `.env` do worker ficam na raiz.
+repositório. O arquivo `deno.json`, o `deno.lock` e o `.env` do worker ficam em
+`backend/`. Para executar tarefas Deno da raiz, use `--config backend/deno.json`;
+dentro de `backend/`, use `deno task <tarefa>`.
 
 ```sh
 rtk supabase start --workdir backend
@@ -55,17 +61,20 @@ os testes usam 5174. O login exige a conta configurada como proprietária.
 
 ## Coletor
 
-Copie `.env.example` para `.env` e preencha as credenciais do ambiente escolhido.
-A credencial `SUPABASE_SERVICE_ROLE_KEY` pertence exclusivamente ao worker.
+Copie `backend/.env.example` para `backend/.env` e preencha as credenciais do ambiente escolhido.
+A credencial `SUPABASE_SECRET_KEY` (`sb_secret_...`) pertence exclusivamente ao worker.
+Use a chave **Secret** de `rtk supabase status --workdir backend` no ambiente local
+ou de **Settings > API Keys** no projeto hospedado. Não use a chave publishable
+nem a chave JWT legada `service_role`.
 Configure também `RESEND_API_KEY`, `FROM_EMAIL` e `TO_EMAILS` para os emails.
 
 ```sh
-rtk deno task run        # Uma coleta
-rtk deno task validate   # Verificação dos anúncios existentes
-rtk deno task worker     # Fila manual e agendamento persistente
+rtk deno task --config backend/deno.json run        # Uma coleta
+rtk deno task --config backend/deno.json validate   # Verificação dos anúncios existentes
+rtk deno task --config backend/deno.json worker     # Fila manual e agendamento persistente
 ```
 
-O worker verifica a fila a cada 30 segundos e agenda coletas às 06:00, 14:00 e
+O worker verifica a fila ao iniciar e a cada 1 hora após cada ciclo e agenda coletas às 06:00, 14:00 e
 22:00 em `America/Sao_Paulo`. `WORKER_SCHEDULE_ENABLED=false` desabilita o
 agendamento interno. Todos os comandos compartilham o mesmo lease no banco.
 404/410 confirmam remoção; bloqueios e falhas de rede preservam o último estado
@@ -78,13 +87,13 @@ Não carregue o `.env` de produção nas provas. Execute Deno e Playwright
 sequencialmente, pois compartilham os dados locais.
 
 ```sh
-rtk deno task test:unit
-rtk deno task test
+rtk deno task --config backend/deno.json test:unit
+rtk deno task --config backend/deno.json test
 rtk pnpm --dir frontend run build
 rtk pnpm --dir frontend test
-rtk deno task check
-rtk deno task lint
-rtk deno task fmt:check
+rtk deno task --config backend/deno.json check
+rtk deno task --config backend/deno.json lint
+rtk deno task --config backend/deno.json fmt:check
 ```
 
 As provas de CLI usam substituições determinísticas para portais e email, sem
@@ -95,4 +104,4 @@ responsividade e navegação por teclado.
 Alterações de schema seguem novas migrations em `backend/supabase/migrations/`.
 O histórico aplicado não deve ser reescrito. Para implantar ou operar serviços
 systemd, consulte o [guia de operação](docs/property-interface.md) e
-[scripts/SYSTEMD-SETUP.md](scripts/SYSTEMD-SETUP.md).
+[backend/scripts/SYSTEMD-SETUP.md](backend/scripts/SYSTEMD-SETUP.md).

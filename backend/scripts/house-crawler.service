@@ -1,0 +1,21 @@
+[Unit]
+Description=House Crawler - Busca anúncios de imóveis
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=beigelman
+WorkingDirectory=/home/beigelman/dev/house-crawler/backend
+ExecStart=/home/beigelman/dev/house-crawler/backend/scripts/run-house-crawler.sh
+StandardOutput=journal
+StandardError=journal
+
+# Variáveis de ambiente (se necessário)
+# Environment="SUPABASE_URL=your-url"
+# Environment="SUPABASE_KEY=your-key"
+# OU melhor: usar EnvironmentFile
+# EnvironmentFile=/home/beigelman/dev/house-crawler/backend/.env
+
+[Install]
+WantedBy=multi-user.target

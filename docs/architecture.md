@@ -77,20 +77,22 @@ declarações e funções com linhas em branco. Usar uma declaração de estado 
 linha e nomes que indiquem seu papel. Extrair componentes e funções por
 responsabilidade, sem criar arquivos para cada expressão curta.
 
-`deno task fmt:check` verifica código Deno, React, CSS e testes com a mesma
+`deno task --config backend/deno.json fmt:check` verifica código Deno, React, CSS e testes com a mesma
 configuração. Tipos gerados não recebem edição manual. A baseline de anúncios substitui as migrations legadas após reset. Futuras migrations
 usam SQL expandido e indentado; o histórico aplicado não deve ser reescrito.
 
 ## Testes
 
-`tests/unit/` executa regras, HTTP, parsing e aplicação com fakes sem banco.
-`tests/integration/` verifica o banco, os adapters e os processos CLI locais.
-`tests/support/` contém preparação, fakes e subprocessos; `tests/fixtures/`
+`backend/tests/unit/` executa regras, HTTP, parsing e aplicação com fakes sem banco.
+`backend/tests/integration/` verifica o banco, os adapters e os processos CLI locais.
+`backend/tests/support/` contém preparação, fakes e subprocessos; `backend/tests/fixtures/`
 contém HTML dos portais. `frontend/tests/` cobre os fluxos reais no navegador.
 As assertions existentes foram mantidas durante a reorganização.
 
-Os executáveis Deno e a configuração Supabase ficam dentro de `backend/`.
-Configuração Deno, ambiente do worker e tarefas públicas continuam na raiz.
+Os executáveis Deno, configuração e lockfile Deno, ambiente do worker, testes,
+scripts de operação e Makefile ficam dentro de `backend/`, junto da configuração
+Supabase. Da raiz, execute tarefas com `deno task --config backend/deno.json <tarefa>`;
+dentro de `backend/`, use `deno task <tarefa>`.
 Comandos Supabase usam `--workdir backend`; isso não altera o identificador do
 projeto local nem seus dados.
 

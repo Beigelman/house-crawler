@@ -9,7 +9,7 @@ node_modules/
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
-tests/.local.json
+backend/tests/.local.json
 
 test-results/
 playwright-report/

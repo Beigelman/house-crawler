@@ -6,11 +6,15 @@ body {
   margin: 0;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font: inherit;
 }
 
-button, .button {
+button,
+.button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26,7 +30,8 @@ button, .button {
   white-space: normal;
 }
 
-button:hover, .button:hover {
+button:hover,
+.button:hover {
   background: #e9f0e7;
 }
 
@@ -55,7 +60,9 @@ a {
   text-underline-offset: 3px;
 }
 
-input, select, textarea {
+input,
+select,
+textarea {
   display: block;
   width: 100%;
   min-width: 0;
@@ -82,7 +89,9 @@ label {
   display: block;
 }
 
-label input, label select, label textarea {
+label input,
+label select,
+label textarea {
   margin-top: 6px;
 }
 
@@ -95,7 +104,10 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 
-h1, h2, h3, p {
+h1,
+h2,
+h3,
+p {
   margin: 0;
 }
 

@@ -26,6 +26,20 @@ export async function pollWorker(
     } catch (e) {
       console.error('Erro do coletor:', sanitizeDiagnostic(e));
     }
-    if (!deps.shouldStop?.()) await sleep(30000);
+    // Keep the dashboard heartbeat fresh while queue polling waits an hour.
+    for (
+      let waited = 0;
+      waited < 3600000 && !deps.shouldStop?.();
+      waited += 30000
+    ) {
+      await sleep(30000);
+      if (waited + 30000 < 3600000 && !deps.shouldStop?.()) {
+        try {
+          await deps.store.heartbeat();
+        } catch (e) {
+          console.error('Erro do heartbeat:', sanitizeDiagnostic(e));
+        }
+      }
+    }
   }
 }

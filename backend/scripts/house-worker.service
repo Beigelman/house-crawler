@@ -1,0 +1,16 @@
+[Unit]
+Description=House Crawler request worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/dev/house-crawler/backend
+EnvironmentFile=%h/dev/house-crawler/backend/.env
+# Adjust this executable to the installed Deno binary on the worker host.
+ExecStart=/usr/bin/env deno task worker
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
