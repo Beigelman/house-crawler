@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { Profile } from '../../../../shared/property.ts';
-import { profiles } from './searches.api';
+import type { SavedSearch } from '../../../../shared/property.ts';
+import { searches } from './searches.api';
 import { SearchProfileForm } from './SearchProfileForm';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
@@ -9,8 +9,8 @@ import { EmptyState } from '../../components/EmptyState';
 import { PageHeading } from '../../components/PageHeading';
 
 export function SearchesPage() {
-  const profilesQuery = useQuery({ queryKey: ['profiles'], queryFn: profiles });
-  const [draft, setDraft] = useState<Profile | null>(null);
+  const profilesQuery = useQuery({ queryKey: ['searches'], queryFn: searches });
+  const [draft, setDraft] = useState<SavedSearch | null>(null);
   if (profilesQuery.isPending) return <LoadingState />;
   if (profilesQuery.isError) {
     return <ErrorState retry={() => void profilesQuery.refetch()} />;

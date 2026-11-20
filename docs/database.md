@@ -1,68 +1,55 @@
 # Banco de dados
 
-O schema atual é definido pelas migrations em
-`backend/supabase/migrations/`. Os arquivos foram movidos sem alteração de
-conteúdo. A configuração local fica em `backend/supabase/config.toml`.
+A baseline em `backend/supabase/migrations/` instala um banco novo. Ela substitui o histórico legado e não pode ser aplicada por cima do schema antigo. Nenhum reset remoto faz parte deste refactor.
 
 ## Tabelas
 
-| Tabela                       | Responsabilidade                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| `public.real_states`         | Identidade do imóvel pelo link, atributos observados, disponibilidade e comparação |
-| `public.property_profile`    | Buscas habilitadas, critérios e fontes                                             |
-| `public.property_mark`       | Status e nota do usuário sobre um imóvel                                           |
-| `public.property_request`    | Solicitações duráveis de coleta e chave idempotente                                |
-| `public.property_run`        | Fotografia das buscas e resultado de cada execução                                 |
-| `public.property_source_run` | Resultado, quantidade e diagnóstico de cada fonte                                  |
-| `public.property_price`      | Observações de preço, incluindo importações legadas                                |
-| `public.property_match`      | Relação entre buscas e imóveis correspondentes                                     |
-| `public.property_heartbeat`  | Último sinal do worker                                                             |
-| `private.property_owner`     | Identidade autorizada a acessar o painel                                           |
-| `private.property_lease`     | Dono, token e validade da execução exclusiva                                       |
+| Tabela | Responsabilidade |
+| --- | --- |
+| `public.listings` | Anúncios dos portais, com UUID interno, URL única, identificador opcional da fonte e últimos atributos conhecidos |
+| `public.listing_price_history` | Primeiro preço e mudanças reais, ligados ao anúncio e ao job |
+| `public.listing_marks` | Status e nota do proprietário por UUID de anúncio |
+| `public.saved_searches` | Critérios tipados, limites em centavos, fontes e habilitação |
+| `public.crawl_jobs` | Fila e execução em um registro: origem, chave idempotente, snapshot, estados e email |
+| `public.crawl_source_runs` | Resultado, quantidade e diagnóstico de cada fonte/busca em um job |
+| `private.worker_state` | Heartbeat, job atual, token de fencing e validade do lease |
+| `private.app_owner` | UUID do usuário autorizado no Supabase Auth |
 
-## Funções e invariantes
+Um anúncio representa uma publicação, não um imóvel físico deduplicado entre portais. `(source, source_listing_id)` é único quando há identificador confiável; a URL canônica também é única. Relacionamentos usam o UUID interno. A aplicação conserva URLs nas rotas de detalhe para permitir links diretos.
 
-| RPC / função                       | Regra que protege                                                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| `is_property_owner`                | Identidade autorizada, verificada nas policies/RPCs                                      |
-| `enqueue_property_crawl`           | Enqueue manual durável, replay idempotente, limite de frequência e uma solicitação ativa |
-| `enqueue_scheduled_property_crawl` | Agenda pelo relógio do banco, com a mesma fila e uma identidade por horário              |
-| `private.property_schedule_slot`   | Horário mais recente às 06:00, 14:00 ou 22:00 em Brasília                                |
-| `seed_property_profile`            | Busca inicial padrão quando necessária                                                   |
-| `claim_property_run`               | Aquisição exclusiva, fotografia dos perfis e interrupção de execução expirada            |
-| `renew_property_lease`             | Renovação do dono atual                                                                  |
-| `private.assert_property_lease`    | Rejeição de gravações com token vencido ou substituído                                   |
-| `save_property_batch`              | Persistência de atributos, preço/histórico, correspondência e novidades                  |
-| `record_property_source`           | Resultado da fonte vinculado à execução válida                                           |
-| `finish_property_run`              | Finalização, comparação e resultado de email separado                                    |
+Não existem colunas legadas `titulo`/`valor`, flags de importação nem tabela de correspondências persistidas. Preços usam centavos inteiros; valores desconhecidos permanecem nulos. `first_seen_at`, `last_seen_at`, `last_checked_at` e `removed_at` têm significados separados.
 
-O lease é renovado pelo worker a cada 30 segundos. Após 120 segundos sem
-renovação, outro processo pode assumir; o token anterior não pode mais gravar.
-Essas garantias dependem de transações e validação no banco, não apenas do timer
-TypeScript.
+`shared/search.ts` converte critérios tipados para os objetos de formulário/providers e snapshots imutáveis para a execução. No banco, amenities `true` são exigências e `null` significa sem exigência; a UI mantém seus checkboxes atuais. Faixas e arrays têm constraints no banco.
 
-Ausência numa busca não confirma remoção. 403, timeout e falha de parser deixam
-a disponibilidade confirmada intacta. Remoção confirmada preserva histórico e
-notas. Preço desconhecido preserva a última observação válida. Comparações usam
-preços pedidos de anúncios coletados e exigem pelo menos cinco outros anúncios
-ativos elegíveis.
+## Consultas e transações
 
-## Acesso e evolução
+`listing_comparisons` é uma view com `security_invoker=true`: usa RLS das tabelas e calcula pares ativos do mesmo bairro/quartos, excluindo o próprio anúncio. São necessários cinco pares com preço/área válidos. Mediana, diferença percentual e horário da consulta não são persistidos.
 
-RLS e grants restringem a interface ao proprietário configurado. Funções do worker
-são chamadas com credencial de servidor. A interface usa chave pública e sessão.
-Verifique o SQL das migrations para os predicados e permissões exatos.
+| RPC | Responsabilidade |
+| --- | --- |
+| `is_app_owner` | Autoriza a identidade nas policies/RPCs |
+| `enqueue_crawl` | Persiste um job manual, replay idempotente, limite de 60 segundos e uma tarefa ativa |
+| `enqueue_scheduled_crawl` | Persiste uma tarefa por horário de Brasília, sem repetir slots concluídos |
+| `seed_saved_search` | Configuração inicial padrão quando não há buscas |
+| `claim_crawl_job` | Claim exclusivo e snapshot dos critérios; interrompe tarefa com lease expirado |
+| `renew_worker_lease` | Renova somente o token/job atual |
+| `save_listing_batch` | Atualiza observações e anexa mudanças de preço na mesma transação |
+| `record_crawl_source` | Registra o resultado da fonte com lease válido |
+| `finish_crawl_job` | Finaliza o job e resultado de email, liberando o lease |
+| `record_worker_heartbeat` | Atualiza a saúde com relógio do banco |
+| `worker_health` | Retorna apenas o heartbeat para o proprietário, sem expor o token |
 
-Execute ferramentas locais a partir da raiz com `--workdir backend`:
+O lease é renovado a cada 30 segundos e expira após 120 segundos. Claim, enqueue manual e agendado são serializados no banco. Uma CLI direta não ultrapassa um job já enfileirado. Todos os caminhos de escrita do worker validam o fencing token. Um job corresponde a uma tentativa; não há retentativa automática.
+
+Ausência numa busca não confirma remoção. 403, timeout e falha de parser preservam a disponibilidade confirmada. Remoção mantém notas e preços. Preço desconhecido preserva o último preço e seu timestamp. Verificar apenas a disponibilidade também preserva o timestamp da observação de preço. Atributos desconhecidos não apagam valores conhecidos. Mudanças reais de preço dentro do mesmo job também são mantidas; observações repetidas sem mudança não criam linhas.
+
+## Acesso e desenvolvimento
+
+As seis tabelas públicas usam RLS e grants restritos ao proprietário; somente buscas e notas podem ser escritas pela sessão. O worker usa credencial de servidor. As tabelas privadas não são expostas no Data API. O usuário proprietário referencia `auth.users`.
 
 ```sh
-rtk supabase status --workdir backend
-rtk supabase migration list --local --workdir backend
+rtk supabase db reset --local --no-seed --workdir backend
 rtk supabase gen types --lang typescript --local --workdir backend > shared/database.types.ts
 ```
 
-Gere os tipos somente contra o schema local atualizado e revise o diff. Não edite
-`shared/database.types.ts` manualmente. Mudanças futuras de schema usam novas
-migrations; não reformate migrations já aplicadas. O material em
-`docs/legacy-supabase/` é histórico e não deve ser usado para configurar acesso.
-Consulte [property-interface.md](property-interface.md) para a operação atual.
+O reset acima é apenas para o ambiente local descartável. Tipos são gerados do schema local. Mudanças futuras usam novas migrations, sem reescrever uma baseline já implantada.

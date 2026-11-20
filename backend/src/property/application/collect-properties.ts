@@ -1,10 +1,10 @@
-import type { Property } from '../../../../shared/property.ts';
+import type { ScrapedListing } from '../../../../shared/property.ts';
 import { matchesProfile } from '../domain/matches-profile.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
-import type { Dependencies, Run } from '../ports.ts';
+import type { CrawlJob, Dependencies } from '../ports.ts';
 
 export async function collectProperties(
-  run: Run,
+  run: CrawlJob,
   deps: Dependencies,
   signal: AbortSignal,
 ) {
@@ -13,15 +13,15 @@ export async function collectProperties(
   const newLinks = new Set<string>();
   const observations = new Map<
     string,
-    { property: Property; sources: Set<string> }
+    { property: ScrapedListing; sources: Set<string> }
   >();
-  for (const profile of run.profiles) {
+  for (const profile of run.searches) {
     for (const source of profile.providers) {
       if (signal.aborted) {
         throw signal.reason;
       }
       let outcome: {
-        properties: Property[];
+        properties: ScrapedListing[];
         outcome: string;
         error: string | null;
       };
@@ -49,26 +49,26 @@ export async function collectProperties(
           outcome.properties,
           profile.id,
         );
-        for (const p of fresh) newLinks.add(p.link);
+        for (const p of fresh) newLinks.add(p.url);
         for (const p of outcome.properties) {
-          const sources = observations.get(p.link)?.sources ??
+          const sources = observations.get(p.url)?.sources ??
             new Set<string>();
           sources.add(source);
-          observations.set(p.link, { property: p, sources });
+          observations.set(p.url, { property: p, sources });
         }
       }
       await deps.store.source(run, {
         source,
-        profile_id: profile.id,
+        search_id: profile.id,
         count: outcome.properties.length,
         outcome: outcome.outcome,
         error_category: outcome.error,
       });
     }
   }
-  const news = [...newLinks].flatMap((link) => {
-    const observed = observations.get(link)!;
-    return run.profiles.some((profile) =>
+  const news = [...newLinks].flatMap((url) => {
+    const observed = observations.get(url)!;
+    return run.searches.some((profile) =>
         profile.providers.some((source) => observed.sources.has(source)) &&
         matchesProfile(observed.property, profile.params)
       )

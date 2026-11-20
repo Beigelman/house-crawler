@@ -20,7 +20,7 @@ const result = await executeRun(Deno.args[0] as CommandKind, {
     },
     verify: async () => {
       await observed();
-      return { verification: 'active' };
+      return { last_check_result: 'active' };
     },
   }),
   sendEmail: () => Promise.resolve({ success: true }),

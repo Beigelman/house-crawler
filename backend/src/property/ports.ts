@@ -1,53 +1,53 @@
-import type { Profile, Property } from '../../../shared/property.ts';
+import type { SavedSearch, ScrapedListing } from '../../../shared/property.ts';
 
-export type RunKind = 'collect' | 'validate';
-export type CommandKind = RunKind | 'worker';
-export type RunState = 'succeeded' | 'partial' | 'failed';
+export type JobKind = 'collect' | 'validate';
+export type CommandKind = JobKind | 'worker';
+export type JobState = 'succeeded' | 'partial' | 'failed';
 export type EmailState = 'not_needed' | 'sent' | 'failed';
 
-export type RunResult = {
-  run_id: string | null;
-  state: RunState | 'idle' | 'busy';
+export type JobResult = {
+  job_id: string | null;
+  state: JobState | 'idle' | 'busy';
   summary: string;
 };
 
-export type Run = {
-  run_id: string;
+export type CrawlJob = {
+  job_id: string;
   token: number;
-  kind: RunKind;
-  profiles: Profile[];
+  kind: JobKind;
+  searches: SavedSearch[];
 };
 
 export interface Store {
-  activeRunId?(): Promise<string | null>;
+  activeJobId?(): Promise<string | null>;
   schedule?(): Promise<{ outcome: string; scheduled_at?: string }>;
-  claim(kind: CommandKind): Promise<Run | null>;
-  renew(run: Run): Promise<unknown>;
+  claim(kind: CommandKind): Promise<CrawlJob | null>;
+  renew(run: CrawlJob): Promise<unknown>;
   save(
-    run: Run,
-    items: Property[],
+    run: CrawlJob,
+    items: ScrapedListing[],
     profile: string | null,
-  ): Promise<Property[]>;
+  ): Promise<ScrapedListing[]>;
   source(
-    run: Run,
+    run: CrawlJob,
     value: {
       source: string;
-      profile_id: string | null;
+      search_id: string | null;
       count: number;
       outcome: string;
       error_category: string | null;
     },
   ): Promise<unknown>;
-  finish(run: Run, state: RunState, email: EmailState): Promise<unknown>;
-  listings(): Promise<Property[]>;
+  finish(run: CrawlJob, state: JobState, email: EmailState): Promise<unknown>;
+  listings(): Promise<ScrapedListing[]>;
   heartbeat(): Promise<unknown>;
 }
 
 export interface Provider {
   collect(): Promise<
-    { properties: Property[]; outcome: string; error: string | null }
+    { properties: ScrapedListing[]; outcome: string; error: string | null }
   >;
-  verify(url: string): Promise<{ verification: string }>;
+  verify(url: string): Promise<{ last_check_result: string }>;
 }
 
 export type Dependencies = {
@@ -56,10 +56,10 @@ export type Dependencies = {
   store: Store;
   providers: (
     id: string,
-    params: Profile['params'],
+    params: SavedSearch['params'],
     signal?: AbortSignal,
   ) => Provider;
   sendEmail: (
-    items: Property[],
+    items: ScrapedListing[],
   ) => Promise<{ success: boolean; error?: string }>;
 };

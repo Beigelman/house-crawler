@@ -16,8 +16,8 @@ Deno.test('AC31 all profile requirements use observed attributes', () => {
   assert.equal(matchesProfile(listing, params), true);
   for (
     const key of [
-      'area',
-      'rooms',
+      'area_m2',
+      'bedrooms',
       'suites',
       'neighborhood',
       'has_elevator',
@@ -31,7 +31,7 @@ Deno.test('AC31 all profile requirements use observed attributes', () => {
       key,
     );
   }
-  assert.equal(matchesProfile({ ...listing, area: 80 }, params), false);
+  assert.equal(matchesProfile({ ...listing, area_m2: 80 }, params), false);
 });
 Deno.test('AC37 worker polls within 30 seconds', async () => {
   const h = harness();
@@ -81,7 +81,7 @@ Deno.test('AC46 CLI outcomes map to exit codes and summary IDs', async () => {
   assert.equal(exitCode('failed'), 1);
   assert.equal(exitCode('busy'), 2);
   const r = await executeRun('collect', harness());
-  assert.equal(r.run_id, 'run');
+  assert.equal(r.job_id, 'run');
   assert.match(r.summary, /run/);
   assert.match(r.summary, /succeeded/);
 });
@@ -178,22 +178,22 @@ Deno.test('AC50 both provider fixtures emit structured observations and null unk
       source,
     );
     assert.equal(p.price_cents, 120000000);
-    assert.equal(p.area, 100);
-    assert.equal(p.rooms, 3);
+    assert.equal(p.area_m2, 100);
+    assert.equal(p.bedrooms, 3);
     assert.equal(p.neighborhood, 'asa-norte');
     assert.equal(p.suites, 1);
     assert.equal(p.has_elevator, true);
     assert.equal(p.has_parking, true);
     assert.equal(p.source, source);
-    assert.ok(!p.link.includes('?'));
-    const empty = parsePropertyHtml('<h1>Sem detalhes</h1>', p.link, source);
+    assert.ok(!p.url.includes('?'));
+    const empty = parsePropertyHtml('<h1>Sem detalhes</h1>', p.url, source);
     for (
       const k of [
-        'area',
-        'rooms',
+        'area_m2',
+        'bedrooms',
         'suites',
         'neighborhood',
-        'photo',
+        'photo_url',
         'has_elevator',
         'has_parking',
       ]

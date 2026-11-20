@@ -7,7 +7,7 @@ const fields = [
   ['maxPrice', 'Preço máximo', 'number'],
   ['minArea', 'Área mínima', 'number'],
   ['maxArea', 'Área máxima', 'number'],
-  ['rooms', 'Quartos', 'number'],
+  ['bedrooms', 'Quartos', 'number'],
   ['neighborhood', 'Bairro', 'neighborhood'],
   ['since', 'A partir de', 'date'],
   ['availability', 'Disponibilidade', 'availability'],

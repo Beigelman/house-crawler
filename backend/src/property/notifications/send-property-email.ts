@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import type { Property } from '../../../../shared/property.ts';
+import type { ScrapedListing } from '../../../../shared/property.ts';
 import {
   generateEmailHTML,
   generateEmailText,
@@ -47,7 +47,7 @@ function validateEmailConfig(
  * Envia email com os novos imóveis encontrados
  */
 export async function sendNewPropertiesEmail(
-  properties: Property[],
+  properties: ScrapedListing[],
 ): Promise<{ success: boolean; error?: string }> {
   // Valida configuração
   const config = getEmailConfig();

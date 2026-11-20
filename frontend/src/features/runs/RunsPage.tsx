@@ -24,14 +24,14 @@ export function RunsPage() {
         title='Seu radar, em movimento.'
         description='Cada coleta tem uma história. Acompanhe por aqui.'
       />
-      {runsQuery.data.requests.map((r) => (
+      {runsQuery.data.activeJobs.map((r) => (
         <p className='panel' key={r.id}>Solicitação {r.id} · {r.state}</p>
       ))}
-      {!runsQuery.data.runs.length
+      {!runsQuery.data.jobs.length
         ? <EmptyState>Sem execuções</EmptyState>
         : (
           <div className='runs'>
-            {runsQuery.data.runs.map((r) => (
+            {runsQuery.data.jobs.map((r) => (
               <article key={r.id} className='panel'>
                 <button
                   type='button'
@@ -46,7 +46,7 @@ export function RunsPage() {
                 </button>
                 <small>{r.id}</small>
                 <p>Fim: {date(r.finished_at)} · Email: {r.email_state}</p>
-                {r.property_source_run.map((
+                {r.crawl_source_runs.map((
                   s: {
                     id: number;
                     source: string;
@@ -63,7 +63,7 @@ export function RunsPage() {
                   </div>
                 ))}
                 {selected === r.id && (
-                  <pre>{JSON.stringify(r.profiles,null,2)}</pre>
+                  <pre>{JSON.stringify(r.search_snapshot,null,2)}</pre>
                 )}
               </article>
             ))}

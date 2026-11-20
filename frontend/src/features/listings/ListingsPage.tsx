@@ -27,7 +27,7 @@ export function ListingsPage() {
         </div>
         <div className='listing-grid'>
           {listingsQuery.data.rows.map((listing) => (
-            <ListingCard key={listing.link} listing={listing} />
+            <ListingCard key={listing.url} listing={listing} />
           ))}
         </div>
         <div className='pagination'>

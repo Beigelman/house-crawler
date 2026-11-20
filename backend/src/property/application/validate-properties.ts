@@ -1,9 +1,9 @@
-import type { Dependencies, Run } from '../ports.ts';
-import type { Property } from '../../../../shared/property.ts';
+import type { CrawlJob, Dependencies } from '../ports.ts';
+import type { ScrapedListing } from '../../../../shared/property.ts';
 import { providerIdForUrl } from '../provider-id.ts';
 
 export async function validateProperties(
-  run: Run,
+  run: CrawlJob,
   deps: Dependencies,
   signal: AbortSignal,
 ) {
@@ -11,15 +11,19 @@ export async function validateProperties(
   let failures = 0;
   for (const p of await deps.store.listings()) {
     if (signal.aborted) throw signal.reason;
-    const id = providerIdForUrl(p.link);
+    const id = providerIdForUrl(p.url);
     if (!id) {
-      await deps.store.save(run, [{ ...p, verification: 'unknown' }], null);
+      await deps.store.save(
+        run,
+        [{ ...p, last_check_result: 'unknown' }],
+        null,
+      );
       failures++;
       continue;
     }
     const provider = deps.providers(
       id,
-      run.profiles[0]?.params ??
+      run.searches[0]?.params ??
         {
           neighborhoods: [],
           numberOfRooms: [],
@@ -33,20 +37,20 @@ export async function validateProperties(
         },
       signal,
     );
-    const result = await provider.verify(p.link);
+    const result = await provider.verify(p.url);
     await deps.store.save(run, [{ ...p, ...result }], null);
-    result.verification === 'unknown' ? failures++ : successes++;
+    result.last_check_result === 'unknown' ? failures++ : successes++;
     await deps.store.source(run, {
       source: id,
-      profile_id: null,
+      search_id: null,
       count: 1,
-      outcome: result.verification,
-      error_category: result.verification === 'unknown'
+      outcome: result.last_check_result === 'unknown' ? 'failed' : 'succeeded',
+      error_category: result.last_check_result === 'unknown'
         ? 'verification_unknown'
         : null,
     });
     await (deps.sleep ??
       ((ms: number) => new Promise((r) => setTimeout(r, ms))))(1500);
   }
-  return { successes, failures, newProperties: [] as Property[] };
+  return { successes, failures, newProperties: [] as ScrapedListing[] };
 }

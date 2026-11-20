@@ -1,9 +1,9 @@
-import type { Dependencies, EmailState, Run } from '../ports.ts';
-import type { Property } from '../../../../shared/property.ts';
+import type { CrawlJob, Dependencies, EmailState } from '../ports.ts';
+import type { ScrapedListing } from '../../../../shared/property.ts';
 
 export async function notifyNewProperties(
-  run: Run,
-  items: Property[],
+  run: CrawlJob,
+  items: ScrapedListing[],
   deps: Dependencies,
   signal: AbortSignal,
 ): Promise<EmailState> {

@@ -23,17 +23,17 @@ for (const schedulerFails of [false, true]) {
         events.push('claim');
         assert.ok(queued);
         return Promise.resolve({
-          run_id: queued,
+          job_id: queued,
           token: 1,
           kind: 'collect',
-          profiles: [],
+          searches: [],
         });
       },
       renew: () => Promise.resolve(),
       save: () => Promise.resolve([]),
       source: () => Promise.resolve(),
       finish: (run, state) => {
-        completed = run.run_id + ':' + state;
+        completed = run.job_id + ':' + state;
         queued = '';
         stopped = true;
         return Promise.resolve();
@@ -44,7 +44,7 @@ for (const schedulerFails of [false, true]) {
       store,
       schedule: store.schedule,
       providers: () => {
-        throw new Error('No profiles');
+        throw new Error('No searches');
       },
       sendEmail: () => Promise.resolve({ success: true }),
       shouldStop: () => stopped,

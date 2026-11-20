@@ -1,32 +1,19 @@
-import type { Property } from '../../../../shared/property.ts';
+import type { ScrapedListing } from '../../../../shared/property.ts';
 
 /**
  * Formata o valor do imóvel para exibição
  */
-function formatPrice(price: string): string {
-  // Se já está no formato "R$ X.XXX.XXX", retorna direto
-  if (price.startsWith('R$')) {
-    return price;
-  }
-
-  // Se é apenas número, adiciona R$ e formata
-  const numericValue = price.replace(/\D/g, '');
-  if (numericValue.length > 0) {
-    const formatted = new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 0,
-    }).format(parseInt(numericValue));
-    return formatted;
-  }
-
-  return price;
+function formatPrice(price: number | null | undefined): string {
+  return price == null ? 'Sob consulta' : new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(price / 100);
 }
 
 /**
  * Gera o HTML para o email com os novos imóveis
  */
-export function generateEmailHTML(properties: Property[]): string {
+export function generateEmailHTML(properties: ScrapedListing[]): string {
   const propertiesHTML = properties.map((property) => `
     <tr>
       <td style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
@@ -34,15 +21,15 @@ export function generateEmailHTML(properties: Property[]): string {
           <tr>
             <td>
               <h3 style="margin: 0 0 10px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
-                ${property.titulo}
+                ${property.title}
               </h3>
               <div style="margin: 10px 0;">
                 <span style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 6px; font-size: 20px; font-weight: bold;">
-                  ${formatPrice(property.valor)}
+                  ${formatPrice(property.price_cents)}
                 </span>
               </div>
               <div style="margin-top: 15px;">
-                <a href="${property.link}" 
+                <a href="${property.url}"
                    style="display: inline-block; background-color: #10b981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; transition: background-color 0.3s;"
                    target="_blank">
                   Ver Detalhes →
@@ -134,7 +121,7 @@ export function generateEmailHTML(properties: Property[]): string {
 /**
  * Gera o conteúdo em texto puro (fallback)
  */
-export function generateEmailText(properties: Property[]): string {
+export function generateEmailText(properties: ScrapedListing[]): string {
   let text = `🏠 NOVOS IMÓVEIS ENCONTRADOS\n\n`;
   text += `Encontramos ${properties.length} ${
     properties.length === 1 ? 'novo imóvel' : 'novos imóveis'
@@ -142,9 +129,9 @@ export function generateEmailText(properties: Property[]): string {
   text += `${'='.repeat(60)}\n\n`;
 
   properties.forEach((property, index) => {
-    text += `${index + 1}. ${property.titulo}\n`;
-    text += `   Valor: ${formatPrice(property.valor)}\n`;
-    text += `   Link: ${property.link}\n\n`;
+    text += `${index + 1}. ${property.title}\n`;
+    text += `   Valor: ${formatPrice(property.price_cents)}\n`;
+    text += `   Link: ${property.url}\n\n`;
   });
 
   text += `${'='.repeat(60)}\n\n`;

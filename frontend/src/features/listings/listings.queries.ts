@@ -8,9 +8,9 @@ export function useListings(params: URLSearchParams) {
   });
 }
 
-export function useListingDetail(link: string) {
+export function useListingDetail(url: string) {
   return useQuery({
-    queryKey: ['detail', link],
-    queryFn: () => getListingDetail(link),
+    queryKey: ['detail', url],
+    queryFn: () => getListingDetail(url),
   });
 }

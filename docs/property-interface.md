@@ -18,29 +18,29 @@ rtk deno task lint
 
 Os testes incluem callbacks reais do Auth local e processos CLI com `--preload` que substitui HTTP dos portais e Resend por respostas determinísticas. Esses processos usam um diretório temporário sem `.env` de produção.
 
-Execute as provas Deno e Playwright **sequencialmente**: compartilham os mesmos dados locais. Não carregue `.env` de produção nas provas. `supabase start` aplica a migração em um banco novo; para um banco local já iniciado, aplique o arquivo SQL em uma sessão local ou recrie somente esse ambiente descartável.
+Execute as provas Deno e Playwright **sequencialmente**: compartilham os mesmos dados locais. Não carregue `.env` de produção nas provas. `supabase start` aplica a migração em um banco novo; para um banco local já iniciado, recrie somente esse ambiente descartável com `rtk supabase db reset --local --no-seed --workdir backend`.
 
 Para desenvolvimento manual, copie `frontend/.env.example` para `frontend/.env.local` e preencha a URL/chave pública do projeto de desenvolvimento. `pnpm --dir frontend run dev` abre a interface em localhost. Ela não contém credenciais de worker. Crie um usuário no Auth do ambiente de desenvolvimento e configure seu UUID como proprietário conforme abaixo; não use a identidade de teste em produção.
 
-## Corte de credenciais e migração em produção
+## Instalação em um banco novo
 
-Push, implantação e alterações no banco real exigem autorização explícita; este documento não as executa.
+Esta baseline exige um banco de aplicação vazio. Ela substitui o histórico antigo; não é uma migração incremental de produção. O reset remoto e a implantação são operações separadas. Não execute `db reset --linked` como parte do desenvolvimento.
 
-1. Inventarie o schema e as policies reais. Faça backup do banco e registre a quantidade e uma exportação de `link,titulo,valor,created_at`. A migração preserva esses campos e acrescenta atributos opcionais. Imóveis antigos não ganham quartos/área/bairro inventados.
-2. Pause os timers atuais e espere qualquer coleta/validação terminar. Não rode a versão antiga junto da versão nova durante o corte: a versão antiga não participa do lease.
-3. Configure `SUPABASE_SERVICE_ROLE_KEY` no ambiente **do worker**. Antes de revogar permissões antigas, verifique essa credencial com uma consulta somente leitura à tabela existente; não a imprima nem a coloque em uma variável `VITE_*`. O código novo recusa o fallback para a chave anônima.
-4. Revise e aplique `backend/supabase/migrations/*_property_interface.sql` no banco autorizado. Ele é aditivo e repetível, mas revoga as policies públicas antigas. Confira a exportação do passo 1 e os totais após o backfill; preços legados têm uma observação marcada `legacy`, não uma variação de preço fabricada.
+1. Pare o worker antigo e os timers antes de trocar o banco/schema.
+2. Em um projeto novo ou previamente limpo pelo administrador, aplique a baseline em `backend/supabase/migrations/` com a CLI. Confira o projeto alvo antes de qualquer comando remoto.
+3. Configure `SUPABASE_SERVICE_ROLE_KEY` exclusivamente no ambiente do worker, junto da URL do novo projeto. Nunca coloque essa credencial em `VITE_*`.
+4. No ambiente local descartável, reinstale com `rtk supabase db reset --local --no-seed --workdir backend`. Esse comando apaga os dados locais e aplica a baseline.
 5. Provisione a conta do proprietário no Supabase Auth (Dashboard ou administração confiável), desative novos cadastros no projeto se ele for dedicado, e execute em uma sessão administrativa:
 
 ```sql
-insert into private.property_owner(singleton,user_id)
+insert into private.app_owner(singleton,user_id)
 values(true,'UUID-DO-USUARIO-AUTH')
 on conflict(singleton) do update set user_id=excluded.user_id;
 ```
 
 Somente esse UUID recebe acesso. Não use `user_metadata` editável para autorização. Um usuário autenticado diferente não pode ler nem escrever imóveis, buscas, execuções ou solicitações.
 
-6. Confira grants e RLS para todas as tabelas `property_*` e `real_states`; rode os advisors do Supabase. Os RPCs de worker só têm EXECUTE para `service_role`; o enqueue confere a identidade dentro do banco, com search path fixo. Não habilite acesso anônimo para resolver erros.
+6. Confira grants e RLS para as seis tabelas públicas e a view `listing_comparisons`; rode os advisors do Supabase. Os RPCs de worker só têm EXECUTE para `service_role`; o enqueue confere a identidade dentro do banco, com search path fixo. Não habilite acesso anônimo para resolver erros.
 7. Configure URL do site e redirect allowlist do Auth para `https://SEU-DOMINIO/login` (e localhost apenas no projeto de desenvolvimento). O cliente usa magic link sem criar usuários. A sessão restaura o caminho privado solicitado.
 8. Defina **somente** `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no build estático. Rode `pnpm --dir frontend install --frozen-lockfile` e `pnpm --dir frontend run build`. Publique `frontend/dist`; `_redirects` e `vercel.json` fornecem exemplos de fallback SPA. Abrir diretamente `/imoveis`, `/buscas` ou `/execucoes` deve retornar o shell com HTTP 200.
 9. Inicie `deno task worker` no host onde os portais funcionam. `deno task run` e `deno task validate` continuam disponíveis; todos usam o mesmo lease. Retome os timers existentes após validar o novo caminho. Os horários desses timers não mudaram.
@@ -51,9 +51,9 @@ Somente esse UUID recebe acesso. Não use `user_metadata` editável para autoriz
 
 ### Coleta agendada no worker
 
-Aplique também `backend/supabase/migrations/20261118223050_property_worker_schedule.sql` antes de reiniciar o worker. Ele agenda coletas diariamente às **06:00, 14:00 e 22:00 no fuso America/Sao_Paulo**, usando o relógio do banco. Não precisa instalar cron no computador nem habilitar pg_cron.
+A baseline já inclui o agendamento. O worker agenda coletas diariamente às **06:00, 14:00 e 22:00 no fuso America/Sao_Paulo**, usando o relógio do banco. Não precisa instalar cron no computador nem habilitar pg_cron.
 
-Em cada ciclo, o worker chama `enqueue_scheduled_property_crawl` com sua credencial de servidor. A função coloca uma solicitação na mesma fila de “Coletar agora”, com o proprietário e todas as buscas habilitadas. Depois, `claim_property_run` assume a solicitação e registra a execução e seus resultados. O frontend pode ficar fechado.
+Em cada ciclo, o worker chama `enqueue_scheduled_crawl` com sua credencial de servidor. A função coloca uma solicitação na mesma fila de “Coletar agora”, com o horário e todas as buscas habilitadas. Depois, `claim_crawl_job` assume o mesmo job e registra seus resultados. O frontend pode ficar fechado.
 
 O agendamento começa após aplicar a migração e reiniciar `deno task worker`. Ao iniciar ou retornar de um período offline, o worker faz uma única coleta de recuperação para o horário agendado mais recente, inclusive se esse horário foi no dia anterior. Não acumula todas as coletas perdidas. A chave persistida impede repetir o mesmo horário após reinícios ou com múltiplos workers. Uma fila ocupada adia a nova solicitação até haver espaço; sem proprietário ou buscas habilitadas, nada é criado. Uma falha no agendamento não impede o processamento de solicitações manuais.
 

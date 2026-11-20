@@ -1,5 +1,5 @@
 import { type CheerioAPI, load } from 'cheerio';
-import { Property } from '../../../../shared/property.ts';
+import { ScrapedListing } from '../../../../shared/property.ts';
 
 export async function fetchDocument(
   url: string,
@@ -16,9 +16,11 @@ export async function fetchDocument(
   return load(html);
 }
 
-export function printProperty(property: Property): void {
+export function printProperty(property: ScrapedListing): void {
   console.log(
-    `Titulo: ${property.titulo}\nValor: ${property.valor}\nLink: ${property.link}\n`,
+    `Titulo: ${property.title}\nValor: ${(property.price_cents == null
+      ? 'Sob consulta'
+      : property.price_cents / 100)}\nLink: ${property.url}\n`,
   );
 }
 

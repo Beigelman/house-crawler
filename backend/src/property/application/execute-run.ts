@@ -2,7 +2,7 @@ import type {
   CommandKind,
   Dependencies,
   EmailState,
-  RunResult,
+  JobResult,
 } from '../ports.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
 import { collectProperties } from './collect-properties.ts';
@@ -12,14 +12,14 @@ import { notifyNewProperties } from './notify-new-properties.ts';
 export async function executeRun(
   kind: CommandKind,
   deps: Dependencies,
-): Promise<RunResult> {
+): Promise<JobResult> {
   const run = await deps.store.claim(kind);
   if (!run) {
     const activeId = kind === 'worker'
       ? null
-      : await deps.store.activeRunId?.() ?? null;
+      : await deps.store.activeJobId?.() ?? null;
     return {
-      run_id: activeId,
+      job_id: activeId,
       state: kind === 'worker' ? 'idle' : 'busy',
       summary: kind === 'worker'
         ? 'Coletor ocioso'
@@ -51,16 +51,16 @@ export async function executeRun(
     const state = failures ? (successes ? 'partial' : 'failed') : 'succeeded';
     await deps.store.finish(run, state, email);
     return {
-      run_id: run.run_id,
+      job_id: run.job_id,
       state,
-      summary: `Execução ${run.run_id}: ${state}`,
+      summary: `Execução ${run.job_id}: ${state}`,
     };
   } catch (e) {
     if (!controller.signal.aborted) {
       try {
         await deps.store.source(run, {
           source: 'system',
-          profile_id: null,
+          search_id: null,
           count: 0,
           outcome: 'failed',
           error_category: sanitizeDiagnostic(e),

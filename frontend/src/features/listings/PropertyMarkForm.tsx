@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { savePropertyMark } from './listings.api';
 
 export function PropertyMarkForm(
-  { link, value, onSave }: {
-    link: string;
+  { listingId, value, onSave }: {
+    listingId: string;
     value: { status: string | null; note: string | null } | null;
     onSave: () => void;
   },
@@ -45,7 +45,7 @@ export function PropertyMarkForm(
         onClick={async () => {
           setPending(true);
           try {
-            await savePropertyMark(link, status, note);
+            await savePropertyMark(listingId, status, note);
             setMessage('Anotação salva');
             onSave();
           } catch {

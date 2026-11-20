@@ -1,13 +1,13 @@
 import { load } from 'cheerio';
 import { parseBRL } from './parse-brl.ts';
-import { type Property } from '../../../../shared/property.ts';
+import { type ScrapedListing } from '../../../../shared/property.ts';
 import { normalizeWhitespace, sanitizeUrl } from './html-utils.ts';
 
 export function parsePropertyHtml(
   html: string,
   url: string,
   source: string,
-): Property {
+): ScrapedListing {
   const $ = load(html);
   const text = normalizeWhitespace($('body').text());
   const entries: Record<string, unknown>[] = [];
@@ -41,11 +41,6 @@ export function parsePropertyHtml(
     amount != null && Number.isFinite(Number(amount)) && Number(amount) > 0
       ? Math.round(Number(amount) * 100)
       : parseBRL(raw);
-  const price = raw ||
-    (numeric != null
-      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
-        .format(numeric / 100)
-      : 'Sob consulta');
   const num = (pattern: RegExp) => {
     const m = text.match(pattern);
     return m ? Number(m[1].replace(',', '.')) : null;
@@ -68,37 +63,38 @@ export function parsePropertyHtml(
   const amenity = (positive: RegExp, negative: RegExp) =>
     negative.test(text) ? false : positive.test(text) ? true : null;
   const image = Array.isArray(data.image) ? data.image[0] : data.image;
-  let photo = typeof image === 'string'
+  let photo_url = typeof image === 'string'
     ? image
     : typeof image === 'object' && image !== null
     ? (image as { url?: string }).url
     : null;
-  photo = photo || $('meta[property="og:image"]').attr('content') || null;
-  if (photo) {
+  photo_url = photo_url || $('meta[property="og:image"]').attr('content') ||
+    null;
+  if (photo_url) {
     try {
-      photo = new URL(photo, url).href;
-      if (!/^https?:/.test(photo)) photo = null;
+      photo_url = new URL(photo_url, url).href;
+      if (!/^https?:/.test(photo_url)) photo_url = null;
     } catch {
-      photo = null;
+      photo_url = null;
     }
   }
   return {
-    titulo: normalizeWhitespace(
+    title: normalizeWhitespace(
       String(data.name || $('h1').first().text() || ''),
     ),
-    valor: price,
-    link: sanitizeUrl(url),
+    url: sanitizeUrl(url),
     source,
+    source_listing_id: url.match(/\/imovel\/(\d+)(?:[/?#-]|$)/)?.[1] ?? null,
     price_cents: numeric,
-    area: Number(floor?.value) > 0
+    area_m2: Number(floor?.value) > 0
       ? Number(floor?.value)
       : num(/([0-9]+(?:[,.][0-9]+)?)\s*m[²2]/i),
-    rooms: Number(data.numberOfBedrooms) > 0
+    bedrooms: Number(data.numberOfBedrooms) > 0
       ? Number(data.numberOfBedrooms)
       : num(/([0-9]+)\s*(?:quartos?|dormitórios?)/i),
     suites: num(/([0-9]+)\s*su[ií]tes?/i),
     neighborhood,
-    photo: photo ?? null,
+    photo_url: photo_url ?? null,
     has_elevator: amenity(
       /\belevador(?:es)?\b/i,
       /sem\s+elevador|não\s+(?:possui|tem)\s+elevador/i,

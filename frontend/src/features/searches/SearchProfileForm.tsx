@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Profile } from '../../../../shared/property.ts';
+import type { SavedSearch } from '../../../../shared/property.ts';
 import { saveProfile } from './searches.api';
 
 const numericFields = [
@@ -16,14 +16,14 @@ const amenityFields = [['hasElevator', 'Exigir elevador'], [
 ]] as const;
 
 export function SearchProfileForm(
-  { initial, saved }: { initial: Profile; saved: () => void },
+  { initial, saved }: { initial: SavedSearch; saved: () => void },
 ) {
   const [profile, setProfile] = useState(initial);
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
-  const setParam = <Key extends keyof Profile['params']>(
+  const setParam = <Key extends keyof SavedSearch['params']>(
     key: Key,
-    value: Profile['params'][Key],
+    value: SavedSearch['params'][Key],
   ) => setProfile({ ...profile, params: { ...profile.params, [key]: value } });
   return (
     <form

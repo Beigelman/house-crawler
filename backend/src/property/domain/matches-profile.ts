@@ -1,10 +1,14 @@
-import type { Property, SearchParams } from '../../../../shared/property.ts';
+import type {
+  ScrapedListing,
+  SearchParams,
+} from '../../../../shared/property.ts';
 import { toCentavos } from '../../../../shared/money.ts';
 
-export function matchesProfile(p: Property, s: SearchParams): boolean {
+export function matchesProfile(p: ScrapedListing, s: SearchParams): boolean {
   return p.neighborhood != null && s.neighborhoods.includes(p.neighborhood) &&
-    p.rooms != null && s.numberOfRooms.includes(p.rooms) && p.area != null &&
-    p.area >= s.minArea && p.area <= s.maxArea && p.price_cents != null &&
+    p.bedrooms != null && s.numberOfRooms.includes(p.bedrooms) &&
+    p.area_m2 != null &&
+    p.area_m2 >= s.minArea && p.area_m2 <= s.maxArea && p.price_cents != null &&
     p.price_cents >= toCentavos(s.minPrice) &&
     p.price_cents <= toCentavos(s.maxPrice) &&
     (s.numberOfSuites === 0 ||

@@ -6,12 +6,12 @@ import type { Listing } from '../../../../shared/property.ts';
 export async function browse(params: URLSearchParams) {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const marked = params.get('mark');
-  let q = supabase.from('real_states').select(
-    marked ? '*,property_mark!inner(status,user_id)' : '*',
+  let q = supabase.from('listing_comparisons').select(
+    marked ? '*,listing_marks!inner(status,user_id)' : '*',
     { count: 'exact' },
   );
   for (
-    const [param, col] of [['source', 'source'], ['rooms', 'rooms'], [
+    const [param, col] of [['source', 'source'], ['bedrooms', 'bedrooms'], [
       'neighborhood',
       'neighborhood',
     ], ['availability', 'availability']]
@@ -23,8 +23,8 @@ export async function browse(params: URLSearchParams) {
     const [param, col, op, factor] of [
       ['minPrice', 'price_cents', 'gte', 100],
       ['maxPrice', 'price_cents', 'lte', 100],
-      ['minArea', 'area', 'gte', 1],
-      ['maxArea', 'area', 'lte', 1],
+      ['minArea', 'area_m2', 'gte', 1],
+      ['maxArea', 'area_m2', 'lte', 1],
     ] as const
   ) {
     const v = params.get(param);
@@ -33,13 +33,13 @@ export async function browse(params: URLSearchParams) {
     }
   }
   if (params.get('q')) {
-    q = q.ilike('titulo', '%' + params.get('q')!.replace(/[%_]/g, '') + '%');
+    q = q.ilike('title', '%' + params.get('q')!.replace(/[%_]/g, '') + '%');
   }
-  if (params.get('since')) q = q.gte('created_at', params.get('since')!);
+  if (params.get('since')) q = q.gte('first_seen_at', params.get('since')!);
   if (marked) {
     const u = await supabase.auth.getUser();
-    q = q.eq('property_mark.status', marked).eq(
-      'property_mark.user_id',
+    q = q.eq('listing_marks.status', marked).eq(
+      'listing_marks.user_id',
       u.data.user!.id,
     );
   }
@@ -51,8 +51,8 @@ export async function browse(params: URLSearchParams) {
     })
     : sort === 'opportunity'
     ? q.order('discount_pct', { ascending: false, nullsFirst: false })
-    : q.order('created_at', { ascending: false });
-  const r = await q.order('link', { ascending: true }).range(
+    : q.order('first_seen_at', { ascending: false });
+  const r = await q.order('url', { ascending: true }).range(
     (page - 1) * 30,
     page * 30 - 1,
   );
@@ -60,31 +60,36 @@ export async function browse(params: URLSearchParams) {
   return { rows: r.data as unknown as Listing[], count: r.count ?? 0, page };
 }
 
-export async function getListingDetail(link: string) {
+export async function getListingDetail(url: string) {
   const user = (await supabase.auth.getUser()).data.user!;
-  const [listing, history, marks] = await Promise.all([
-    supabase.from('real_states').select('*').eq('link', link).maybeSingle()
-      .then(check),
-    supabase.from('property_price').select('*').eq('listing_link', link)
-      .order('seen_at').order('id').then(check),
-    supabase.from('property_mark').select('*').eq('listing_link', link).eq(
-      'user_id',
-      user.id,
-    ).maybeSingle().then(check),
-  ]);
+  const listing = check(
+    await supabase.from('listing_comparisons').select('*').eq('url', url)
+      .maybeSingle(),
+  );
+  const [history, marks] = listing
+    ? await Promise.all([
+      supabase.from('listing_price_history').select('*').eq(
+        'listing_id',
+        listing.id,
+      )
+        .order('seen_at').order('id').then(check),
+      supabase.from('listing_marks').select('*').eq('listing_id', listing.id)
+        .eq('user_id', user.id).maybeSingle().then(check),
+    ])
+    : [[], null];
   return { listing: listing as Listing | null, history, mark: marks };
 }
 
 export async function savePropertyMark(
-  link: string,
+  listingId: string,
   status: string,
   note: string,
 ) {
   const user = (await supabase.auth.getUser()).data.user!;
   check(
-    await supabase.from('property_mark').upsert({
+    await supabase.from('listing_marks').upsert({
       user_id: user.id,
-      listing_link: link,
+      listing_id: listingId,
       status: status || null,
       note: note || null,
     }),

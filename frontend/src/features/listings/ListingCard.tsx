@@ -6,8 +6,8 @@ import { PropertyPhoto } from './PropertyPhoto';
 export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <article data-listing className='listing-card'>
-      <Link to={'/imoveis/' + encodeURIComponent(listing.link)}>
-        <PropertyPhoto url={listing.photo} />
+      <Link to={'/imoveis/' + encodeURIComponent(listing.url)}>
+        <PropertyPhoto url={listing.photo_url} />
         <div className='listing-body'>
           <div className='card-top'>
             <small>{source(listing.source)}</small>
@@ -20,11 +20,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
             </span>
           </div>
           <h2>{money(listing.price_cents)}</h2>
-          <h3>{listing.titulo}</h3>
+          <h3>{listing.title}</h3>
           <p>{listing.neighborhood || 'Não informado'}</p>
           <div className='listing-meta'>
-            <span>{listing.area ?? '—'} m²</span>
-            <span>{listing.rooms ?? '—'} quartos</span>
+            <span>{listing.area_m2 ?? '—'} m²</span>
+            <span>{listing.bedrooms ?? '—'} quartos</span>
           </div>
           {listing.discount_pct != null && (
             <small className='deal'>

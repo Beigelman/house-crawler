@@ -1,7 +1,7 @@
 import { parsePropertyHtml } from './parse-property-html.ts';
 import type { CheerioAPI } from 'cheerio';
 
-import { Property, SearchParams } from '../../../../shared/property.ts';
+import { ScrapedListing, SearchParams } from '../../../../shared/property.ts';
 import { PropertyProvider } from './base-property-provider.ts';
 import { buildAbsoluteUrl, buildPageUrl, isSameDomain } from './html-utils.ts';
 
@@ -27,7 +27,7 @@ export class DfImoveisProvider extends PropertyProvider {
       const $ = await this.getDocument(pageUrl);
       const pageLinks = this.extractListingLinks($);
       const previousTotal = links.size;
-      pageLinks.forEach((link) => links.add(link));
+      pageLinks.forEach((url) => links.add(url));
 
       if (pageLinks.length === 0 || links.size === previousTotal) {
         break;
@@ -76,12 +76,12 @@ export class DfImoveisProvider extends PropertyProvider {
     }${hasParking ? '&vagasdegaragem=1' : ''}`;
   }
 
-  protected async parseProperty(url: string): Promise<Property> {
+  protected async parseProperty(url: string): Promise<ScrapedListing> {
     const $ = await this.getDocument(url);
     return parsePropertyHtml($.html(), url, 'dfimoveis');
   }
 
   async isValid(url: string): Promise<boolean> {
-    return (await this.verify(url)).verification === 'active';
+    return (await this.verify(url)).last_check_result === 'active';
   }
 }

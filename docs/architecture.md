@@ -44,7 +44,7 @@ flowchart LR
 ## Fluxo de uma coleta
 
 1. Uma tarefa Deno ou o polling solicita trabalho ao store.
-2. O banco adquire o lease e devolve uma fotografia dos perfis de busca.
+2. O banco adquire o lease e devolve uma snapshot das buscas tipadas.
 3. `executeRun` mantém a renovação do lease e o sinal de cancelamento.
 4. `collectProperties` percorre perfis/fontes, grava observações e registra
    resultados por fonte. Reúne identidades novas sem duplicar a notificação.
@@ -78,8 +78,8 @@ linha e nomes que indiquem seu papel. Extrair componentes e funções por
 responsabilidade, sem criar arquivos para cada expressão curta.
 
 `deno task fmt:check` verifica código Deno, React, CSS e testes com a mesma
-configuração. Tipos gerados não recebem edição manual. Futuras migrations usam
-SQL expandido e indentado; as migrations existentes mantêm seus bytes originais.
+configuração. Tipos gerados não recebem edição manual. A baseline de anúncios substitui as migrations legadas após reset. Futuras migrations
+usam SQL expandido e indentado; o histórico aplicado não deve ser reescrito.
 
 ## Testes
 

@@ -1,8 +1,11 @@
+import type { SearchRow } from '../../shared/search.ts';
+import { matchesProfile } from '../../backend/src/property/domain/matches-profile.ts';
+import { fromSearchRow } from '../../shared/search.ts';
 import assert from 'node:assert/strict';
-import type { Property } from '../../shared/property.ts';
+import type { ScrapedListing } from '../../shared/property.ts';
 import { executeRun } from '../../backend/src/property/application/execute-run.ts';
 import { pollWorker } from '../../backend/src/runtime/poll-worker.ts';
-import { listing, params } from '../support/property-fixtures.ts';
+import { listing } from '../support/property-fixtures.ts';
 // Boundary regressions use the production persistence adapter, not callback counts.
 const local = await import('../support/local.ts');
 const { propertyStore } = await import(
@@ -18,52 +21,52 @@ const boundary = (name: string, fn: () => Promise<void>) =>
       await fn();
     },
   });
-function realDeps(properties: Property[] = [listing]) {
+function realDeps(properties: ScrapedListing[] = [listing]) {
   return {
     store: propertyStore(local.admin),
     providers: () => ({
       collect: () =>
         Promise.resolve({ properties, outcome: 'succeeded', error: null }),
-      verify: () => Promise.resolve({ verification: 'active' }),
+      verify: () => Promise.resolve({ last_check_result: 'active' }),
     }),
     sendEmail: () => Promise.resolve({ success: true }),
     sleep: () => Promise.resolve(),
   };
 }
 boundary(
-  'AC31 observed nonmatching attributes remove persisted profile membership',
+  'AC31 current observations match searches without persisted memberships',
   async () => {
-    await local.sql`update property_profile set params=${
-      local.sql.json(params)
-    },providers=array['wimoveis']`;
+    await local
+      .sql`update saved_searches set sources=array['wimoveis'], bedrooms=array[3], neighborhoods=array['asa-norte'],min_suites=1,has_parking=true`;
     const deps = realDeps();
     await executeRun('collect', deps);
-    assert.equal((await local.sql`select * from property_match`).length, 1);
-    await executeRun('collect', realDeps([{ ...listing, area: 80 }]));
-    assert.equal((await local.sql`select * from property_match`).length, 0);
+    assert.equal(await matchingListings(), 1);
+    await executeRun('collect', realDeps([{ ...listing, area_m2: 80 }]));
+    assert.equal(await matchingListings(), 0);
     for (
       const key of [
         'price_cents',
-        'area',
-        'rooms',
+        'area_m2',
+        'bedrooms',
         'neighborhood',
         'suites',
         'has_parking',
         'has_elevator',
       ]
     ) {
-      await executeRun('collect', realDeps());
-      await executeRun('collect', realDeps([{ ...listing, [key]: null }]));
+      const search = fromSearchRow(
+        (await local.sql`select * from saved_searches`)[0] as SearchRow,
+      );
       assert.equal(
-        (await local.sql`select * from property_match`).length,
-        0,
+        matchesProfile({ ...listing, [key]: null }, search.params),
+        false,
         key,
       );
     }
     for (
       const invalid of [
-        { area: 151 },
-        { rooms: 4 },
+        { area_m2: 151 },
+        { bedrooms: 4 },
         { suites: 0 },
         { has_elevator: false },
         { has_parking: false },
@@ -75,7 +78,7 @@ boundary(
       await executeRun('collect', realDeps());
       await executeRun('collect', realDeps([{ ...listing, ...invalid }]));
       assert.equal(
-        (await local.sql`select * from property_match`).length,
+        await matchingListings(),
         0,
         JSON.stringify(invalid),
       );
@@ -85,24 +88,24 @@ boundary(
 boundary(
   'AC63 new identity matching a later profile still receives one notification',
   async () => {
-    await local.sql`update property_profile set providers=array['wimoveis']`;
+    await local.sql`update saved_searches set sources=array['wimoveis']`;
     await local
-      .sql`update property_profile set params=jsonb_set(params,'{numberOfRooms}','[4]')`;
+      .sql`update saved_searches set bedrooms=array[4]`;
     await local
-      .sql`insert into property_profile(id,name,params,providers) select '44444444-4444-4444-8444-444444444444','Later',jsonb_set(params,'{numberOfRooms}','[3]'),providers from property_profile`;
+      .sql`insert into saved_searches select (jsonb_populate_record(null::saved_searches,to_jsonb(s)||jsonb_build_object('id','44444444-4444-4444-8444-444444444444','name','Later','bedrooms',jsonb_build_array(3)))).* from saved_searches s`;
     let n = 0;
-    const payloads: Property[][] = [];
+    const payloads: ScrapedListing[][] = [];
     const deps = {
       ...realDeps(),
-      sendEmail: (items: Property[]) => {
+      sendEmail: (items: ScrapedListing[]) => {
         n++;
         payloads.push(items);
         return Promise.resolve({ success: true });
       },
     };
     await executeRun('collect', deps);
-    assert.equal((await local.sql`select * from real_states`).length, 1);
-    assert.equal((await local.sql`select * from property_match`).length, 1);
+    assert.equal((await local.sql`select * from listings`).length, 1);
+    assert.equal(await matchingListings(), 1);
     assert.equal(n, 1);
     assert.deepEqual(payloads[0], [listing]);
     await executeRun('collect', {
@@ -114,7 +117,7 @@ boundary(
             outcome: 'succeeded',
             error: null,
           }),
-        verify: () => Promise.resolve({ verification: 'active' }),
+        verify: () => Promise.resolve({ last_check_result: 'active' }),
       }),
     });
     assert.equal(n, 1);
@@ -136,20 +139,20 @@ boundary(
               ? { properties: [], outcome: 'failed', error: 'blocked' }
               : { properties: [listing], outcome: 'succeeded', error: null },
           ),
-        verify: () => Promise.resolve({ verification: 'active' }),
+        verify: () => Promise.resolve({ last_check_result: 'active' }),
       }),
     });
     assert.equal(r.state, 'partial');
     assert.equal(
-      (await local.sql`select state from property_run`)[0].state,
+      (await local.sql`select state from crawl_jobs`)[0].state,
       'partial',
     );
     assert.equal(
-      (await local.sql`select link from real_states`)[0].link,
-      listing.link,
+      (await local.sql`select url from listings`)[0].url,
+      listing.url,
     );
     const sources = await local
-      .sql`select source,outcome,count from property_source_run order by source`;
+      .sql`select source,outcome,count from crawl_source_runs order by source`;
     assert.deepEqual([...sources], [{
       source: 'dfimoveis',
       outcome: 'failed',
@@ -186,11 +189,11 @@ boundary(
         },
       });
       const rows = await local
-        .sql`select * from property_source_run where run_id=${r.run_id}`;
+        .sql`select * from crawl_source_runs where job_id=${r.job_id}`;
       assert.equal(rows.length, 2);
       assert.ok(
         rows.every((row) =>
-          row.error_category === 'timeout' && row.run_id === r.run_id
+          row.error_category === 'timeout' && row.job_id === r.job_id
         ),
       );
       assert.equal(
@@ -216,16 +219,16 @@ boundary(
       providers: () => ({
         collect: () =>
           Promise.reject(new Error('network ' + secrets.join(' '))),
-        verify: () => Promise.resolve({ verification: 'active' }),
+        verify: () => Promise.resolve({ last_check_result: 'active' }),
       }),
     });
-    const runs = await local.sql`select * from property_run`;
-    const sources = await local.sql`select * from property_source_run`;
-    assert.equal(runs[0].id, r.run_id);
+    const runs = await local.sql`select * from crawl_jobs`;
+    const sources = await local.sql`select * from crawl_source_runs`;
+    assert.equal(runs[0].id, r.job_id);
     assert.equal(sources.length, 2);
     assert.ok(
       sources.every((s) =>
-        s.run_id === r.run_id && ['dfimoveis', 'wimoveis'].includes(s.source) &&
+        s.job_id === r.job_id && ['dfimoveis', 'wimoveis'].includes(s.source) &&
         s.error_category === 'network'
       ),
     );
@@ -245,25 +248,25 @@ Deno.test({
     for (const source of ['dfimoveis', 'wimoveis'] as const) {
       const p = await collectedAdapter(source);
       assert.deepEqual(p, {
-        titulo: 'Apartamento Asa Norte',
-        valor: 'R$\u00a01.200.000,00',
-        link: 'https://www.' +
+        title: 'Apartamento Asa Norte',
+        url: 'https://www.' +
           (source === 'dfimoveis' ? 'dfimoveis.com.br' : 'wimoveis.com.br') +
           '/imovel/123',
         source,
+        source_listing_id: '123',
         price_cents: 120000000,
-        area: 100,
-        rooms: 3,
+        area_m2: 100,
+        bedrooms: 3,
         suites: 1,
         neighborhood: 'asa-norte',
-        photo: 'https://example.test/photo.jpg',
+        photo_url: 'https://example.test/photo.jpg',
         has_elevator: true,
         has_parking: true,
       });
       const empty = await collectedAdapter(source, true);
       assert.equal(empty.price_cents, null);
-      assert.equal(empty.photo, null);
-      assert.equal(empty.valor, 'Sob consulta');
+      assert.equal(empty.photo_url, null);
+      assert.equal(empty.price_cents, null);
     }
   },
 });
@@ -316,39 +319,42 @@ async function withEmailCapture(
 boundary(
   'AC63 existing email adapter uses run-wide new matches and environment recipients',
   async () => {
-    await local.sql`update property_profile set providers=array['wimoveis']`;
+    await local.sql`update saved_searches set sources=array['wimoveis']`;
     await local
-      .sql`update property_profile set params=jsonb_set(params,'{numberOfRooms}','[4]')`;
+      .sql`update saved_searches set bedrooms=array[4]`;
     await local
-      .sql`insert into property_profile(id,name,params,providers) select '44444444-4444-4444-8444-444444444444','Later',jsonb_set(params,'{numberOfRooms}','[3]'),providers from property_profile`;
+      .sql`insert into saved_searches select (jsonb_populate_record(null::saved_searches,to_jsonb(s)||jsonb_build_object('id','44444444-4444-4444-8444-444444444444','name','Later','bedrooms',jsonb_build_array(3)))).* from saved_searches s`;
     await withEmailCapture(false, async (send, calls) => {
       await executeRun('collect', { ...realDeps(), sendEmail: send });
       assert.equal(calls.length, 1);
       assert.deepEqual(calls[0].to, ['one@example.test', 'two@example.test']);
       assert.equal(calls[0].from, 'radar@example.test');
-      assert.ok(String(calls[0].html).includes(listing.link));
+      assert.ok(String(calls[0].html).includes(listing.url));
       await executeRun('collect', {
         ...realDeps([{ ...listing, price_cents: 110000000 }]),
         sendEmail: send,
       });
       assert.equal(calls.length, 1);
-      assert.equal((await local.sql`select * from real_states`).length, 1);
+      assert.equal((await local.sql`select * from listings`).length, 1);
       assert.equal(
         Number(
-          (await local.sql`select price_cents from real_states`)[0].price_cents,
+          (await local.sql`select price_cents from listings`)[0].price_cents,
         ),
         110000000,
       );
-      assert.equal((await local.sql`select * from property_price`).length, 2);
+      assert.equal(
+        (await local.sql`select * from listing_price_history`).length,
+        2,
+      );
     });
   },
 );
 boundary(
   'AC64 failed real email adapter preserves durable data through a later idle worker poll',
   async () => {
-    await local.rpc('enqueue_property_crawl', {
+    await local.rpc('enqueue_crawl', {
       request_key: crypto.randomUUID(),
-      profile_ids: [local.profile],
+      search_ids: [local.profile],
     }, await local.token());
     await withEmailCapture(true, async (send, calls) => {
       let contacts = 0;
@@ -363,7 +369,7 @@ boundary(
               error: null,
             });
           },
-          verify: () => Promise.resolve({ verification: 'active' }),
+          verify: () => Promise.resolve({ last_check_result: 'active' }),
         }),
         sendEmail: send,
       };
@@ -385,13 +391,13 @@ boundary(
       });
       assert.equal(contacts, before);
       assert.equal(calls.length, 1);
-      assert.equal((await local.sql`select * from real_states`).length, 1);
+      assert.equal((await local.sql`select * from listings`).length, 1);
       const [run] = await local
-        .sql`select * from property_run where id=${r.run_id}`;
+        .sql`select * from crawl_jobs where id=${r.job_id}`;
       assert.equal(run.state, 'succeeded');
       assert.equal(run.email_state, 'failed');
       assert.equal(
-        (await local.sql`select state from property_request`)[0].state,
+        (await local.sql`select state from crawl_jobs`)[0].state,
         'succeeded',
       );
     });
@@ -440,16 +446,16 @@ boundary(
         await local.reset();
         if (entry === 'validate_properties.ts') {
           await local
-            .sql`insert into real_states(link,titulo,valor) values('https://www.dfimoveis.com.br/imovel/123','DF','R$ 1'),('https://www.wimoveis.com.br/imovel/123','WI','R$ 1')`;
+            .sql`insert into listings(url,title,source) values('https://www.dfimoveis.com.br/imovel/123','DF','dfimoveis'),('https://www.wimoveis.com.br/imovel/123','WI','wimoveis')`;
         }
         let busyId: string | null = null;
-        if (mode === 'busy') busyId = (await local.begin()).run_id;
+        if (mode === 'busy') busyId = (await local.begin()).job_id;
         const result = await commandEntry(entry, mode);
         assert.equal(result.code, code, result.out + result.err);
         assert.match(result.out, new RegExp(state));
         const runId = busyId ??
           (await local
-            .sql`select id from property_run order by started_at desc limit 1`)[
+            .sql`select id from crawl_jobs order by started_at desc limit 1`)[
               0
             ].id;
         assert.ok(result.out.includes(runId));
@@ -480,3 +486,12 @@ Deno.test({
     await browserProof('AC41');
   },
 });
+
+async function matchingListings() {
+  const searches = (await local.sql`select * from saved_searches`).map((row) =>
+    fromSearchRow(row as SearchRow)
+  );
+  return (await local.sql`select * from listings`).filter((row) =>
+    searches.some((s) => matchesProfile(row as ScrapedListing, s.params))
+  ).length;
+}

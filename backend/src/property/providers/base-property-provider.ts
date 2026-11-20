@@ -2,7 +2,10 @@ import { delay } from '@std/async/delay';
 import type { CheerioAPI } from 'cheerio';
 import { load } from 'cheerio';
 
-import type { Property, SearchParams } from '../../../../shared/property.ts';
+import type {
+  ScrapedListing,
+  SearchParams,
+} from '../../../../shared/property.ts';
 import { parsePropertyHtml } from './parse-property-html.ts';
 import { fetchWithRetry, HttpError } from '../../platform/http-client.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
@@ -46,25 +49,25 @@ export abstract class PropertyProvider {
   /**
    * Método principal para coletar todas as propriedades do provider
    */
-  async collect(): Promise<Property[]> {
+  async collect(): Promise<ScrapedListing[]> {
     return (await this.collectOutcome()).properties;
   }
 
   async collectOutcome(): Promise<
-    { properties: Property[]; outcome: string; error: string | null }
+    { properties: ScrapedListing[]; outcome: string; error: string | null }
   > {
-    const properties: Property[] = [];
+    const properties: ScrapedListing[] = [];
     let failed = 0;
     let error: string | null = null;
     try {
       const links = await this.collectListingLinks(
         this.buildListUrl(this.searchParams),
       );
-      for (const link of links) {
+      for (const url of links) {
         this.signal?.throwIfAborted();
         try {
-          const p = await this.parseProperty(link);
-          if (!p.titulo) throw new Error('parse title missing');
+          const p = await this.parseProperty(url);
+          if (!p.title) throw new Error('parse title missing');
           properties.push(p);
         } catch (e) {
           failed++;
@@ -88,32 +91,35 @@ export abstract class PropertyProvider {
     }
   }
 
-  async verify(url: string): Promise<{ verification: string }> {
+  async verify(url: string): Promise<{ last_check_result: string }> {
     try {
       const $ = await this.getDocument(url);
       const text = $('body').text();
       if (
         /an[uú]ncio (?:foi )?removido|im[oó]vel (?:foi )?removido/i.test(text)
-      ) return { verification: 'removed' };
+      ) return { last_check_result: 'removed' };
       const p = parsePropertyHtml(
         $.html(),
         url,
         this.name === 'DF Imóveis' ? 'dfimoveis' : 'wimoveis',
       );
       return {
-        verification: p.titulo && p.price_cents != null ? 'active' : 'unknown',
+        last_check_result: p.title && p.price_cents != null
+          ? 'active'
+          : 'unknown',
       };
     } catch (e) {
       return {
-        verification: e instanceof HttpError && [404, 410].includes(e.status)
-          ? 'removed'
-          : 'unknown',
+        last_check_result:
+          e instanceof HttpError && [404, 410].includes(e.status)
+            ? 'removed'
+            : 'unknown',
       };
     }
   }
 
   /**
-   * Valida se um link de propriedade ainda é válido
+   * Valida se um url de propriedade ainda é válido
    * Verifica se a página existe E se os elementos (título/preço) podem ser extraídos
    */
   abstract isValid(url: string): Promise<boolean>;
@@ -138,7 +144,7 @@ export abstract class PropertyProvider {
   /**
    * Método abstrato para parsear um imóvel a partir de sua URL
    */
-  protected abstract parseProperty(url: string): Promise<Property>;
+  protected abstract parseProperty(url: string): Promise<ScrapedListing>;
 
   /**
    * Método abstrato para construir a URL de listagem a partir dos parâmetros de busca
@@ -148,9 +154,13 @@ export abstract class PropertyProvider {
   /**
    * Imprime informações sobre uma propriedade coletada
    */
-  protected printProperty(property: Property): void {
-    console.log(`[${this.name}] ${property.titulo} - ${property.valor}`);
-    console.log(`[${this.name}] ${property.link}\n`);
+  protected printProperty(property: ScrapedListing): void {
+    console.log(
+      `[${this.name}] ${property.title} - ${(property.price_cents == null
+        ? 'Sob consulta'
+        : property.price_cents / 100)}`,
+    );
+    console.log(`[${this.name}] ${property.url}\n`);
   }
 
   /**

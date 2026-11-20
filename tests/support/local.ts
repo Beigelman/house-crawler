@@ -1,3 +1,4 @@
+import { toSearchRow } from '../../shared/search.ts';
 import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
 const status = await new Deno.Command('rtk', {
@@ -43,22 +44,32 @@ export async function token(id = owner) {
   return data.session!.access_token;
 }
 export async function reset() {
-  await sql`truncate public.property_run, public.property_request, public.property_profile, public.real_states, public.property_heartbeat restart identity cascade`;
-  await sql`update private.property_lease set expires_at = '-infinity', run_id=null`;
-  await sql`insert into private.property_owner(singleton,user_id) values(true,${owner}) on conflict(singleton) do update set user_id=excluded.user_id`;
-  await sql`insert into property_profile(id,name,params,providers) values(${profile},'Minha busca',${
-    sql.json({
-      neighborhoods: ['asa-norte', 'asa-sul', 'octogonal'],
-      numberOfRooms: [3, 4],
-      numberOfSuites: 0,
-      hasElevator: true,
-      hasParking: false,
-      minArea: 90,
-      maxArea: 150,
-      minPrice: 1000000,
-      maxPrice: 1400000,
-    })
-  }::jsonb,array['dfimoveis','wimoveis'])`;
+  await sql`truncate public.crawl_jobs, public.saved_searches, public.listings restart identity cascade`;
+  await sql`insert into private.worker_state(singleton) values(true) on conflict do nothing`;
+  await sql`update private.worker_state set lease_expires_at = '-infinity', job_id=null, seen_at=null`;
+  await token();
+  await sql`insert into private.app_owner(singleton,user_id) values(true,${owner}) on conflict(singleton) do update set user_id=excluded.user_id`;
+  await sql`insert into saved_searches ${
+    sql(
+      toSearchRow({
+        id: profile,
+        name: 'Minha busca',
+        enabled: true,
+        providers: ['dfimoveis', 'wimoveis'],
+        params: {
+          neighborhoods: ['asa-norte', 'asa-sul', 'octogonal'],
+          numberOfRooms: [3, 4],
+          numberOfSuites: 0,
+          hasElevator: true,
+          hasParking: false,
+          minArea: 90,
+          maxArea: 150,
+          minPrice: 1000000,
+          maxPrice: 1400000,
+        },
+      }),
+    )
+  }`;
 }
 export async function rpc(
   name: string,
@@ -78,36 +89,35 @@ export async function rpc(
   return { status: res.status, body: text ? JSON.parse(text) : null };
 }
 export async function begin(kind = 'collect') {
-  const r = await rpc('claim_property_run', { p_kind: kind });
+  const r = await rpc('claim_crawl_job', { p_kind: kind });
   if (r.status !== 200) throw new Error(JSON.stringify(r));
   return r.body;
 }
 export const item = (
-  link = 'https://www.wimoveis.com.br/imovel/test',
+  url = 'https://www.wimoveis.com.br/imovel/test',
   price = 120000000,
 ) => ({
-  link,
-  titulo: 'Apartamento Asa Norte',
-  valor: 'R$ 1.200.000,00',
+  url,
+  title: 'Apartamento Asa Norte',
   price_cents: price,
   source: 'wimoveis',
-  area: 100,
-  rooms: 3,
+  area_m2: 100,
+  bedrooms: 3,
   neighborhood: 'asa-norte',
   suites: 1,
   has_elevator: true,
   has_parking: true,
-  photo: null,
+  photo_url: null,
 });
 export async function save(
-  run: { run_id: string; token: number },
+  run: { job_id: string; token: number },
   items: unknown[],
   pid: string | null = profile,
 ) {
-  return await rpc('save_property_batch', {
-    p_run: run.run_id,
+  return await rpc('save_listing_batch', {
+    p_job: run.job_id,
     p_token: run.token,
     p_items: items,
-    p_profile: pid,
+    p_search: pid,
   });
 }

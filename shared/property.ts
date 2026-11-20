@@ -10,24 +10,25 @@ export type SearchParams = {
   hasParking: boolean;
 };
 
-export type Property = {
-  titulo: string;
-  valor: string;
-  link: string;
+export type ScrapedListing = {
+  source_listing_id?: string | null;
+  title: string;
+  url: string;
   source?: string | null;
   price_cents?: number | null;
-  area?: number | null;
-  rooms?: number | null;
+  area_m2?: number | null;
+  bedrooms?: number | null;
   suites?: number | null;
   neighborhood?: string | null;
   has_elevator?: boolean | null;
   has_parking?: boolean | null;
-  photo?: string | null;
-  verification?: string;
+  photo_url?: string | null;
+  last_check_result?: string;
 };
 
-export type Listing = Property & {
-  created_at: string;
+export type Listing = ScrapedListing & {
+  id: string;
+  first_seen_at: string;
   last_seen_at: string | null;
   availability: string;
   price_observed_at: string | null;
@@ -39,7 +40,7 @@ export type Listing = Property & {
   price_cents: number | null;
 };
 
-export type Profile = {
+export type SavedSearch = {
   id: string;
   name: string;
   enabled: boolean;

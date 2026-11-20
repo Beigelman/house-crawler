@@ -7,388 +7,409 @@ export type Json =
   | Json[];
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
-      property_heartbeat: {
+      crawl_jobs: {
         Row: {
-          seen_at: string;
-          singleton: boolean;
+          created_at: string;
+          email_state: string;
+          error_category: string | null;
+          finished_at: string | null;
+          id: string;
+          kind: string;
+          request_key: string | null;
+          requested_by: string | null;
+          scheduled_at: string | null;
+          search_ids: string[];
+          search_snapshot: Json;
+          started_at: string | null;
+          state: string;
+          trigger: string;
         };
         Insert: {
-          seen_at?: string;
-          singleton?: boolean;
+          created_at?: string;
+          email_state?: string;
+          error_category?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          kind?: string;
+          request_key?: string | null;
+          requested_by?: string | null;
+          scheduled_at?: string | null;
+          search_ids?: string[];
+          search_snapshot?: Json;
+          started_at?: string | null;
+          state?: string;
+          trigger?: string;
         };
         Update: {
-          seen_at?: string;
-          singleton?: boolean;
+          created_at?: string;
+          email_state?: string;
+          error_category?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          kind?: string;
+          request_key?: string | null;
+          requested_by?: string | null;
+          scheduled_at?: string | null;
+          search_ids?: string[];
+          search_snapshot?: Json;
+          started_at?: string | null;
+          state?: string;
+          trigger?: string;
         };
         Relationships: [];
       };
-      property_mark: {
+      crawl_source_runs: {
         Row: {
-          listing_link: string;
+          count: number;
+          error_category: string | null;
+          id: number;
+          job_id: string;
+          outcome: string;
+          search_id: string | null;
+          source: string;
+        };
+        Insert: {
+          count?: number;
+          error_category?: string | null;
+          id?: never;
+          job_id: string;
+          outcome: string;
+          search_id?: string | null;
+          source: string;
+        };
+        Update: {
+          count?: number;
+          error_category?: string | null;
+          id?: never;
+          job_id?: string;
+          outcome?: string;
+          search_id?: string | null;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'crawl_source_runs_job_id_fkey';
+            columns: ['job_id'];
+            isOneToOne: false;
+            referencedRelation: 'crawl_jobs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'crawl_source_runs_search_id_fkey';
+            columns: ['search_id'];
+            isOneToOne: false;
+            referencedRelation: 'saved_searches';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      listing_marks: {
+        Row: {
+          listing_id: string;
           note: string | null;
           status: string | null;
           user_id: string;
         };
         Insert: {
-          listing_link: string;
+          listing_id: string;
           note?: string | null;
           status?: string | null;
           user_id: string;
         };
         Update: {
-          listing_link?: string;
+          listing_id?: string;
           note?: string | null;
           status?: string | null;
           user_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: 'property_mark_listing_link_fkey';
-            columns: ['listing_link'];
+            foreignKeyName: 'listing_marks_listing_id_fkey';
+            columns: ['listing_id'];
             isOneToOne: false;
-            referencedRelation: 'real_states';
-            referencedColumns: ['link'];
-          },
-        ];
-      };
-      property_match: {
-        Row: {
-          listing_link: string;
-          profile_id: string;
-        };
-        Insert: {
-          listing_link: string;
-          profile_id: string;
-        };
-        Update: {
-          listing_link?: string;
-          profile_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'property_match_listing_link_fkey';
-            columns: ['listing_link'];
-            isOneToOne: false;
-            referencedRelation: 'real_states';
-            referencedColumns: ['link'];
+            referencedRelation: 'listing_comparisons';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: 'property_match_profile_id_fkey';
-            columns: ['profile_id'];
+            foreignKeyName: 'listing_marks_listing_id_fkey';
+            columns: ['listing_id'];
             isOneToOne: false;
-            referencedRelation: 'property_profile';
+            referencedRelation: 'listings';
             referencedColumns: ['id'];
           },
         ];
       };
-      property_price: {
+      listing_price_history: {
         Row: {
           id: number;
-          legacy: boolean;
-          listing_link: string;
+          job_id: string;
+          listing_id: string;
           price_cents: number;
-          run_id: string | null;
           seen_at: string;
         };
         Insert: {
-          id?: number;
-          legacy?: boolean;
-          listing_link: string;
+          id?: never;
+          job_id: string;
+          listing_id: string;
           price_cents: number;
-          run_id?: string | null;
           seen_at?: string;
         };
         Update: {
-          id?: number;
-          legacy?: boolean;
-          listing_link?: string;
+          id?: never;
+          job_id?: string;
+          listing_id?: string;
           price_cents?: number;
-          run_id?: string | null;
           seen_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: 'property_price_listing_link_fkey';
-            columns: ['listing_link'];
+            foreignKeyName: 'listing_price_history_job_id_fkey';
+            columns: ['job_id'];
             isOneToOne: false;
-            referencedRelation: 'real_states';
-            referencedColumns: ['link'];
+            referencedRelation: 'crawl_jobs';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: 'property_price_run_id_fkey';
-            columns: ['run_id'];
+            foreignKeyName: 'listing_price_history_listing_id_fkey';
+            columns: ['listing_id'];
             isOneToOne: false;
-            referencedRelation: 'property_run';
+            referencedRelation: 'listing_comparisons';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'listing_price_history_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'listings';
             referencedColumns: ['id'];
           },
         ];
       };
-      property_profile: {
+      listings: {
         Row: {
-          created_at: string;
-          enabled: boolean;
-          id: string;
-          name: string;
-          params: Json;
-          providers: string[];
-        };
-        Insert: {
-          created_at?: string;
-          enabled?: boolean;
-          id?: string;
-          name: string;
-          params: Json;
-          providers: string[];
-        };
-        Update: {
-          created_at?: string;
-          enabled?: boolean;
-          id?: string;
-          name?: string;
-          params?: Json;
-          providers?: string[];
-        };
-        Relationships: [];
-      };
-      property_request: {
-        Row: {
-          created_at: string;
-          id: string;
-          owner_id: string;
-          profile_ids: string[];
-          request_key: string;
-          state: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          owner_id: string;
-          profile_ids: string[];
-          request_key: string;
-          state?: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          owner_id?: string;
-          profile_ids?: string[];
-          request_key?: string;
-          state?: string;
-        };
-        Relationships: [];
-      };
-      property_run: {
-        Row: {
-          email_state: string;
-          error_category: string | null;
-          finished_at: string | null;
-          id: string;
-          kind: string;
-          profiles: Json;
-          request_id: string | null;
-          started_at: string;
-          state: string;
-        };
-        Insert: {
-          email_state?: string;
-          error_category?: string | null;
-          finished_at?: string | null;
-          id?: string;
-          kind: string;
-          profiles: Json;
-          request_id?: string | null;
-          started_at?: string;
-          state?: string;
-        };
-        Update: {
-          email_state?: string;
-          error_category?: string | null;
-          finished_at?: string | null;
-          id?: string;
-          kind?: string;
-          profiles?: Json;
-          request_id?: string | null;
-          started_at?: string;
-          state?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'property_run_request_id_fkey';
-            columns: ['request_id'];
-            isOneToOne: true;
-            referencedRelation: 'property_request';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      property_source_run: {
-        Row: {
-          count: number;
-          error_category: string | null;
-          id: number;
-          outcome: string;
-          profile_id: string | null;
-          run_id: string;
-          source: string;
-        };
-        Insert: {
-          count?: number;
-          error_category?: string | null;
-          id?: number;
-          outcome: string;
-          profile_id?: string | null;
-          run_id: string;
-          source: string;
-        };
-        Update: {
-          count?: number;
-          error_category?: string | null;
-          id?: number;
-          outcome?: string;
-          profile_id?: string | null;
-          run_id?: string;
-          source?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'property_source_run_profile_id_fkey';
-            columns: ['profile_id'];
-            isOneToOne: false;
-            referencedRelation: 'property_profile';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'property_source_run_run_id_fkey';
-            columns: ['run_id'];
-            isOneToOne: false;
-            referencedRelation: 'property_run';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      real_states: {
-        Row: {
-          area: number | null;
+          area_m2: number | null;
           availability: string;
-          cohort: string | null;
-          comparison_at: string | null;
-          created_at: string | null;
-          discount_pct: number | null;
+          bedrooms: number | null;
+          first_seen_at: string;
           has_elevator: boolean | null;
           has_parking: boolean | null;
+          id: string;
+          last_check_result: string;
+          last_checked_at: string | null;
           last_seen_at: string | null;
-          link: string;
-          median_m2: number | null;
           neighborhood: string | null;
-          peer_count: number | null;
-          photo: string | null;
+          photo_url: string | null;
           price_cents: number | null;
           price_observed_at: string | null;
-          rooms: number | null;
-          source: string | null;
+          removed_at: string | null;
+          source: string;
+          source_listing_id: string | null;
           suites: number | null;
-          titulo: string;
-          valor: string;
-          verification: string;
+          title: string;
+          url: string;
         };
         Insert: {
-          area?: number | null;
+          area_m2?: number | null;
           availability?: string;
-          cohort?: string | null;
-          comparison_at?: string | null;
-          created_at?: string | null;
-          discount_pct?: number | null;
+          bedrooms?: number | null;
+          first_seen_at?: string;
           has_elevator?: boolean | null;
           has_parking?: boolean | null;
+          id?: string;
+          last_check_result?: string;
+          last_checked_at?: string | null;
           last_seen_at?: string | null;
-          link: string;
-          median_m2?: number | null;
           neighborhood?: string | null;
-          peer_count?: number | null;
-          photo?: string | null;
+          photo_url?: string | null;
           price_cents?: number | null;
           price_observed_at?: string | null;
-          rooms?: number | null;
-          source?: string | null;
+          removed_at?: string | null;
+          source: string;
+          source_listing_id?: string | null;
           suites?: number | null;
-          titulo: string;
-          valor: string;
-          verification?: string;
+          title: string;
+          url: string;
         };
         Update: {
-          area?: number | null;
+          area_m2?: number | null;
           availability?: string;
-          cohort?: string | null;
-          comparison_at?: string | null;
-          created_at?: string | null;
-          discount_pct?: number | null;
+          bedrooms?: number | null;
+          first_seen_at?: string;
           has_elevator?: boolean | null;
           has_parking?: boolean | null;
+          id?: string;
+          last_check_result?: string;
+          last_checked_at?: string | null;
           last_seen_at?: string | null;
-          link?: string;
-          median_m2?: number | null;
           neighborhood?: string | null;
-          peer_count?: number | null;
-          photo?: string | null;
+          photo_url?: string | null;
           price_cents?: number | null;
           price_observed_at?: string | null;
-          rooms?: number | null;
-          source?: string | null;
+          removed_at?: string | null;
+          source?: string;
+          source_listing_id?: string | null;
           suites?: number | null;
-          titulo?: string;
-          valor?: string;
-          verification?: string;
+          title?: string;
+          url?: string;
+        };
+        Relationships: [];
+      };
+      saved_searches: {
+        Row: {
+          bedrooms: number[];
+          created_at: string;
+          enabled: boolean;
+          has_elevator: boolean | null;
+          has_parking: boolean | null;
+          id: string;
+          max_area_m2: number;
+          max_price_cents: number;
+          min_area_m2: number;
+          min_price_cents: number;
+          min_suites: number;
+          name: string;
+          neighborhoods: string[];
+          sources: string[];
+        };
+        Insert: {
+          bedrooms: number[];
+          created_at?: string;
+          enabled?: boolean;
+          has_elevator?: boolean | null;
+          has_parking?: boolean | null;
+          id?: string;
+          max_area_m2: number;
+          max_price_cents: number;
+          min_area_m2: number;
+          min_price_cents: number;
+          min_suites: number;
+          name: string;
+          neighborhoods: string[];
+          sources: string[];
+        };
+        Update: {
+          bedrooms?: number[];
+          created_at?: string;
+          enabled?: boolean;
+          has_elevator?: boolean | null;
+          has_parking?: boolean | null;
+          id?: string;
+          max_area_m2?: number;
+          max_price_cents?: number;
+          min_area_m2?: number;
+          min_price_cents?: number;
+          min_suites?: number;
+          name?: string;
+          neighborhoods?: string[];
+          sources?: string[];
         };
         Relationships: [];
       };
     };
     Views: {
-      [_ in never]: never;
+      listing_comparisons: {
+        Row: {
+          area_m2: number | null;
+          availability: string | null;
+          bedrooms: number | null;
+          cohort: string | null;
+          comparison_at: string | null;
+          discount_pct: number | null;
+          first_seen_at: string | null;
+          has_elevator: boolean | null;
+          has_parking: boolean | null;
+          id: string | null;
+          last_check_result: string | null;
+          last_checked_at: string | null;
+          last_seen_at: string | null;
+          median_m2: number | null;
+          neighborhood: string | null;
+          peer_count: number | null;
+          photo_url: string | null;
+          price_cents: number | null;
+          price_observed_at: string | null;
+          removed_at: string | null;
+          source: string | null;
+          source_listing_id: string | null;
+          suites: number | null;
+          title: string | null;
+          url: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
-      claim_property_run: { Args: { p_kind: string }; Returns: Json };
-      enqueue_property_crawl: {
-        Args: { profile_ids: string[]; request_key: string };
+      claim_crawl_job: { Args: { p_kind: string }; Returns: Json };
+      enqueue_crawl: {
+        Args: { request_key: string; search_ids: string[] };
         Returns: Json;
       };
-      finish_property_run: {
+      enqueue_scheduled_crawl: { Args: never; Returns: Json };
+      finish_crawl_job: {
         Args: {
           p_email: string;
-          p_run: string;
+          p_job: string;
           p_state: string;
           p_token: number;
         };
         Returns: undefined;
       };
-      is_property_owner: { Args: never; Returns: boolean };
-      record_property_source: {
+      is_app_owner: { Args: never; Returns: boolean };
+      record_crawl_source: {
         Args: {
           p_count: number;
           p_error: string;
+          p_job: string;
           p_outcome: string;
-          p_profile: string;
-          p_run: string;
+          p_search: string;
           p_source: string;
           p_token: number;
         };
         Returns: undefined;
       };
-      renew_property_lease: {
-        Args: { p_run: string; p_token: number };
+      record_worker_heartbeat: { Args: never; Returns: undefined };
+      renew_worker_lease: {
+        Args: { p_job: string; p_token: number };
         Returns: undefined;
       };
-      save_property_batch: {
+      save_listing_batch: {
         Args: {
           p_items: Json;
-          p_profile?: string;
-          p_run: string;
+          p_job: string;
+          p_search?: string;
           p_token: number;
         };
         Returns: Json;
       };
-      seed_property_profile: { Args: never; Returns: undefined };
+      seed_saved_search: { Args: never; Returns: undefined };
+      worker_health: { Args: never; Returns: string };
     };
     Enums: {
       [_ in never]: never;
@@ -534,6 +555,9 @@ export type CompositeTypes<
   : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

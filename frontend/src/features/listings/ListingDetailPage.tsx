@@ -9,8 +9,8 @@ import { PageHeading } from '../../components/PageHeading';
 
 export function ListingDetailPage() {
   const { encodedLink = '' } = useParams();
-  const link = encodedLink;
-  const detailQuery = useListingDetail(link);
+  const url = encodedLink;
+  const detailQuery = useListingDetail(url);
   if (detailQuery.isPending) return <LoadingState />;
   if (detailQuery.isError) {
     return <ErrorState retry={() => void detailQuery.refetch()} />;
@@ -28,18 +28,18 @@ export function ListingDetailPage() {
     <>
       <Link className='back' to='/imoveis'>← Voltar aos imóveis</Link>
       <PageHeading
-        title={listing.titulo}
+        title={listing.title}
         description={listing.neighborhood || 'Não informado'}
         kicker={source(listing.source)}
       />
       <div className='detail-grid'>
         <section className='panel'>
-          <PropertyPhoto url={listing.photo} />
-          <h2>{listing.valor}</h2>
+          <PropertyPhoto url={listing.photo_url} />
+          <h2>{money(listing.price_cents)}</h2>
           <dl>
             {[
-              ['Área', listing.area ? `${listing.area} m²` : null],
-              ['Quartos', listing.rooms],
+              ['Área', listing.area_m2 ? `${listing.area_m2} m²` : null],
+              ['Quartos', listing.bedrooms],
               ['Suítes', listing.suites],
               [
                 'Elevador',
@@ -57,7 +57,7 @@ export function ListingDetailPage() {
                   ? 'Sim'
                   : 'Não',
               ],
-              ['Primeira coleta', date(listing.created_at)],
+              ['Primeira coleta', date(listing.first_seen_at)],
               ['Última coleta', date(listing.last_seen_at)],
               ['Preço observado em', date(listing.price_observed_at)],
             ].map(([label, value]) => (
@@ -69,7 +69,7 @@ export function ListingDetailPage() {
           </dl>
           <a
             className='button primary'
-            href={listing.link}
+            href={listing.url}
             target='_blank'
             rel='noopener noreferrer'
           >
@@ -78,7 +78,7 @@ export function ListingDetailPage() {
         </section>
         <div className='detail-side'>
           <PropertyMarkForm
-            link={listing.link}
+            listingId={listing.id}
             value={detailQuery.data.mark}
             onSave={() => void detailQuery.refetch()}
           />
@@ -111,7 +111,6 @@ export function ListingDetailPage() {
                 <div className='history-row' data-price-observation key={h.id}>
                   <span>
                     {date(h.seen_at)}
-                    {h.legacy && <small>Importação legada</small>}
                   </span>
                   <b>{money(h.price_cents)}</b>
                 </div>

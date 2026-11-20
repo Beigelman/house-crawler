@@ -10,9 +10,9 @@ export async function validationCase(
   await reset();
   const initial = await begin();
   await save(initial, [item()]);
-  await sql`insert into property_mark(user_id,listing_link,status) values(${owner},${item().link},'favorite')`;
-  await rpc('finish_property_run', {
-    p_run: initial.run_id,
+  await sql`insert into listing_marks(user_id,listing_id,status) select ${owner},id,'favorite' from listings where url=${item().url}`;
+  await rpc('finish_crawl_job', {
+    p_job: initial.job_id,
     p_token: initial.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
@@ -55,18 +55,18 @@ export async function validationCase(
       sendEmail: () => Promise.resolve({ success: true }),
       sleep: () => Promise.resolve(),
     });
-    const [row] = await sql`select * from real_states`;
+    const [row] = await sql`select * from listings`;
     assert.equal(
       row.availability,
       ['404', '410', 'removed'].includes(mode) ? 'removed' : 'active',
     );
     assert.equal(
-      row.verification,
+      row.last_check_result,
       ['404', '410', 'removed'].includes(mode) ? 'removed' : 'unknown',
     );
-    assert.equal((await sql`select * from property_price`).length, 1);
-    assert.equal((await sql`select * from property_mark`).length, 1);
-    assert.ok(result.run_id);
+    assert.equal((await sql`select * from listing_price_history`).length, 1);
+    assert.equal((await sql`select * from listing_marks`).length, 1);
+    assert.ok(result.job_id);
     assert.equal(count, mode === 'network' || mode === 'timeout' ? 3 : 1);
   } finally {
     globalThis.fetch = original;

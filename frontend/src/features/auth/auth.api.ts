@@ -4,7 +4,7 @@ import { check } from '../../lib/query-result';
 export const signOut = () => supabase.auth.signOut();
 
 export const isOwner = async () =>
-  check(await supabase.rpc('is_property_owner')) as boolean;
+  check(await supabase.rpc('is_app_owner')) as boolean;
 
 export const getSession = () => supabase.auth.getSession();
 

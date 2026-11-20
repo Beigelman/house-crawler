@@ -1,3 +1,5 @@
+import { fromSearchRow, toSearchRow } from '../../shared/search.ts';
+import type { SearchRow } from '../../shared/search.ts';
 import assert from 'node:assert/strict';
 import {
   begin,
@@ -23,9 +25,9 @@ const test = (name: string, fn: () => Promise<void>) =>
     },
   });
 async function enqueue(key = crypto.randomUUID(), ids = [profile]) {
-  return await rpc('enqueue_property_crawl', {
+  return await rpc('enqueue_crawl', {
     request_key: key,
-    profile_ids: ids,
+    search_ids: ids,
   }, await token());
 }
 
@@ -33,15 +35,13 @@ test('AC03 private tables and enqueue deny non-owner and missing JWT', async () 
   for (const jwt of [await token(other), config.ANON_KEY]) {
     for (
       const table of [
-        'real_states',
-        'property_mark',
-        'property_profile',
-        'property_run',
-        'property_request',
-        'property_price',
-        'property_match',
-        'property_source_run',
-        'property_heartbeat',
+        'listings',
+        'listing_marks',
+        'saved_searches',
+        'crawl_jobs',
+        'crawl_jobs',
+        'listing_price_history',
+        'crawl_source_runs',
       ]
     ) {
       const r = await fetch(
@@ -56,97 +56,95 @@ test('AC03 private tables and enqueue deny non-owner and missing JWT', async () 
         table,
       );
     }
-    const r = await rpc('enqueue_property_crawl', {
+    const r = await rpc('enqueue_crawl', {
       request_key: crypto.randomUUID(),
-      profile_ids: [profile],
+      search_ids: [profile],
     }, jwt);
     assert.equal(r.status, jwt === config.ANON_KEY ? 401 : 403);
   }
 });
-test('AC05 migration preserves legacy data on repeated application', async () => {
-  await sql`insert into real_states(link,titulo,valor,created_at) values('https://legacy.test/1','Original','R$ 1.234.567,89','2024-01-02T00:00:00Z')`;
-  const migration = await Deno.readTextFile(
-    (await Array.fromAsync(Deno.readDir('backend/supabase/migrations'))).filter(
-        (x) => x.name.endsWith('_property_interface.sql'),
-      )[0]
-      ? 'backend/supabase/migrations/' +
-        (await Array.fromAsync(Deno.readDir('backend/supabase/migrations')))
-          .find((x) => x.name.endsWith('_property_interface.sql'))!.name
-      : 'missing',
-  );
-  await sql.unsafe(migration);
-  await sql.unsafe(migration);
-  const [r] = await sql`select link,titulo,valor,created_at from real_states`;
-  assert.equal(r.link, 'https://legacy.test/1');
-  assert.equal(r.titulo, 'Original');
-  assert.equal(r.valor, 'R$ 1.234.567,89');
-  assert.equal(r.created_at.toISOString(), '2024-01-02T00:00:00.000Z');
-  assert.equal(
-    (await sql`select * from property_price where legacy`).length,
-    1,
-  );
+test('MODEL01 fresh schema has exactly eight application tables', async () => {
+  const rows =
+    await sql`select schemaname,tablename from pg_tables where schemaname in ('public','private') order by schemaname,tablename`;
+  assert.deepEqual(rows.map((r) => r.schemaname + '.' + r.tablename), [
+    'private.app_owner',
+    'private.worker_state',
+    'public.crawl_jobs',
+    'public.crawl_source_runs',
+    'public.listing_marks',
+    'public.listing_price_history',
+    'public.listings',
+    'public.saved_searches',
+  ]);
 });
-test('AC06 exact BRL migration parser', async () => {
-  assert.equal(
-    Number((await sql`select private.parse_brl('R$ 1.234.567,89') as n`)[0].n),
-    123456789,
-  );
+test('MODEL02 canonical listing fields exclude legacy and derived values', async () => {
+  const rows =
+    await sql`select column_name from information_schema.columns where table_schema='public' and table_name='listings'`;
+  const fields = rows.map((r) => r.column_name);
+  for (
+    const field of [
+      'id',
+      'url',
+      'title',
+      'source_listing_id',
+      'first_seen_at',
+      'last_checked_at',
+      'removed_at',
+    ]
+  ) assert.ok(fields.includes(field));
+  for (
+    const field of ['valor', 'titulo', 'legacy', 'median_m2', 'discount_pct']
+  ) assert.ok(!fields.includes(field));
 });
-test('AC07 missing ranged and malformed prices stay null', async () => {
-  for (const v of ['', null, 'R$ 1.000 a 2.000', 'Consultar', '1.234,567']) {
-    assert.equal((await sql`select private.parse_brl(${v}) as n`)[0].n, null);
-  }
+test('MODEL03 unknown prices remain null on a first observation', async () => {
+  const r = await begin();
+  await save(r, [{ ...item(), price_cents: null }]);
+  assert.equal(
+    (await sql`select price_cents from listings`)[0].price_cents,
+    null,
+  );
+  assert.equal((await sql`select * from listing_price_history`).length, 0);
 });
 test('AC23 long note rejected without changing persisted note', async () => {
-  await sql`insert into real_states(link,titulo,valor) values('x','x','x')`;
-  await sql`insert into property_mark(user_id,listing_link,note) values(${owner},'x','before')`;
+  await sql`insert into listings(url,title,source) values('x','x','wimoveis')`;
+  await sql`insert into listing_marks(user_id,listing_id,note) select ${owner},id,'before' from listings where url='x'`;
   await assert.rejects(() =>
-    sql`update property_mark set note=${
+    sql`update listing_marks set note=${
       'x'.repeat(2001)
-    } where listing_link='x'`
+    } where listing_id=(select id from listings where url='x')`
   );
-  assert.equal((await sql`select note from property_mark`)[0].note, 'before');
+  assert.equal((await sql`select note from listing_marks`)[0].note, 'before');
 });
-test('AC28 invalid profile writes are atomic', async () => {
-  const [p] = await sql`select * from property_profile`;
-  const bad = [
-    { ...p.params, neighborhoods: [] },
-    { ...p.params, numberOfRooms: [] },
-    { ...p.params, numberOfRooms: [0] },
-    { ...p.params, numberOfRooms: [11] },
-    { ...p.params, numberOfSuites: 11 },
-    { ...p.params, minPrice: -1 },
-    { ...p.params, minArea: 151 },
-    { ...p.params, maxPrice: 1 },
-  ];
-  for (const params of bad) {
+test('AC28 invalid typed search writes are atomic', async () => {
+  const [original] = await sql`select * from saved_searches`;
+  for (
+    const patch of [
+      { neighborhoods: [] },
+      { bedrooms: [] },
+      { bedrooms: [0] },
+      { bedrooms: [11] },
+      { min_suites: 11 },
+      { min_price_cents: -1 },
+      { min_area_m2: 151 },
+      { max_price_cents: 1 },
+      { sources: [] },
+      { sources: ['unknown'] },
+      { name: '' },
+      { name: 'x'.repeat(81) },
+    ]
+  ) {
     await assert.rejects(() =>
-      sql`update property_profile set params=${
-        sql.json(params)
-      }::jsonb where id=${profile}`
+      sql`update saved_searches set ${sql(patch)} where id=${profile}`
     );
+    assert.deepEqual((await sql`select * from saved_searches`)[0], original);
   }
-  for (const providers of [[], ['unknown']]) {
-    await assert.rejects(() =>
-      sql`update property_profile set providers=${providers} where id=${profile}`
-    );
-  }
-  for (const name of ['', 'x'.repeat(81)]) {
-    await assert.rejects(() =>
-      sql`update property_profile set name=${name} where id=${profile}`
-    );
-  }
-  assert.deepEqual(
-    (await sql`select params from property_profile`)[0].params,
-    p.params,
-  );
 });
 test('AC29 default profile preserves current search configuration', async () => {
-  await sql`delete from property_profile`;
-  await rpc('seed_property_profile', {});
-  const [p] = await sql`select * from property_profile`;
-  assert.deepEqual(p.providers, ['dfimoveis', 'wimoveis']);
-  assert.deepEqual(p.params, {
+  await sql`delete from saved_searches`;
+  await rpc('seed_saved_search', {});
+  const [p] = await sql`select * from saved_searches`;
+  assert.deepEqual(p.sources, ['dfimoveis', 'wimoveis']);
+  assert.deepEqual(fromSearchRow(p as SearchRow).params, {
     neighborhoods: ['asa-norte', 'asa-sul', 'octogonal'],
     numberOfRooms: [3, 4],
     numberOfSuites: 0,
@@ -160,10 +158,10 @@ test('AC29 default profile preserves current search configuration', async () => 
 });
 test('AC30 running configuration is immutable snapshot', async () => {
   const r = await begin();
-  await sql`update property_profile set name='Changed'`;
+  await sql`update saved_searches set name='Changed'`;
   assert.equal(
-    (await sql`select profiles from property_run where id=${r.run_id}`)[0]
-      .profiles[0].name,
+    (await sql`select search_snapshot from crawl_jobs where id=${r.job_id}`)[0]
+      .search_snapshot[0].name,
     'Minha busca',
   );
 });
@@ -172,7 +170,7 @@ test('AC32 enqueue accepted only after durable request', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.outcome, 'accepted');
   assert.equal(
-    (await sql`select state from property_request where id=${r.body.request_id}`)[
+    (await sql`select state from crawl_jobs where id=${r.body.job_id}`)[
       0
     ].state,
     'queued',
@@ -183,26 +181,26 @@ test('AC33 idempotent replay returns same durable request', async () => {
   const a = await enqueue(k);
   const b = await enqueue(k);
   assert.equal(b.body.outcome, 'replayed');
-  assert.equal(a.body.request_id, b.body.request_id);
-  assert.equal((await sql`select * from property_request`).length, 1);
+  assert.equal(a.body.job_id, b.body.job_id);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
 });
 test('AC34 reused key with changed payload returns 400', async () => {
   const k = crypto.randomUUID();
   await enqueue(k);
   const r = await enqueue(k, []);
   assert.equal(r.status, 400);
-  assert.equal((await sql`select * from property_request`).length, 1);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
 });
 test('AC35 one active manual request returns busy', async () => {
   const a = await enqueue();
   const b = await enqueue();
   assert.equal(b.body.outcome, 'busy');
-  assert.equal(b.body.request_id, a.body.request_id);
-  assert.equal((await sql`select * from property_request`).length, 1);
+  assert.equal(b.body.job_id, a.body.job_id);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
 });
 test('AC36 new requests limited for 60 seconds', async () => {
   await enqueue();
-  await sql`update property_request set state='succeeded'`;
+  await sql`update crawl_jobs set state='succeeded'`;
   const r = await enqueue();
   assert.equal(r.body.outcome, 'rate_limited');
   assert.ok(r.body.retry_after_seconds > 0 && r.body.retry_after_seconds <= 60);
@@ -211,41 +209,41 @@ test('AC38 manual collection scheduled collection and validation share one lease
   await enqueue();
   const results = await Promise.all(
     ['collect', 'validate', 'worker'].map((p_kind) =>
-      rpc('claim_property_run', { p_kind })
+      rpc('claim_crawl_job', { p_kind })
     ),
   );
   assert.equal(results.filter((r) => r.body !== null).length, 1);
   assert.equal(
-    (await sql`select * from property_run where state='running'`).length,
+    (await sql`select * from crawl_jobs where state='running'`).length,
     1,
   );
 });
 test('AC39 expired fencing token cannot save run data', async () => {
   const r = await begin();
-  await sql`update private.property_lease set expires_at=now()-interval '1 second'`;
+  await sql`update private.worker_state set lease_expires_at=now()-interval '1 second'`;
   assert.equal((await save(r, [item()])).status, 400);
-  assert.equal((await sql`select * from real_states`).length, 0);
+  assert.equal((await sql`select * from listings`).length, 0);
 });
 test('AC40 takeover interrupts expired run and request', async () => {
   await enqueue();
-  const r = await rpc('claim_property_run', { p_kind: 'worker' });
-  await sql`update private.property_lease set expires_at=now()-interval '1 second'`;
+  const r = await rpc('claim_crawl_job', { p_kind: 'worker' });
+  await sql`update private.worker_state set lease_expires_at=now()-interval '1 second'`;
   await begin();
   assert.equal(
-    (await sql`select state from property_run where id=${r.body.run_id}`)[0]
+    (await sql`select state from crawl_jobs where id=${r.body.job_id}`)[0]
       .state,
     'interrupted',
   );
   assert.equal(
-    (await sql`select state from property_request`)[0].state,
+    (await sql`select state from crawl_jobs`)[0].state,
     'interrupted',
   );
 });
 test('AC51 price change updates current price and appends history', async () => {
   let r = await begin();
   await save(r, [item()]);
-  await rpc('finish_property_run', {
-    p_run: r.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: r.job_id,
     p_token: r.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
@@ -253,58 +251,57 @@ test('AC51 price change updates current price and appends history', async () => 
   r = await begin();
   await save(r, [item(undefined, 110000000)]);
   assert.equal(
-    Number((await sql`select price_cents from real_states`)[0].price_cents),
+    Number((await sql`select price_cents from listings`)[0].price_cents),
     110000000,
   );
-  assert.equal((await sql`select * from property_price`).length, 2);
+  assert.equal((await sql`select * from listing_price_history`).length, 2);
 });
 test('AC52 same price and retry do not duplicate observations', async () => {
   const r = await begin();
   await save(r, [item()]);
   await save(r, [item()]);
-  assert.equal((await sql`select * from property_price`).length, 1);
+  assert.equal((await sql`select * from listing_price_history`).length, 1);
 });
 test('AC53 unknown price preserves last known price timestamp', async () => {
   const r = await begin();
   await save(r, [item()]);
   const [before] =
-    await sql`select price_cents,price_observed_at from real_states`;
-  await save(r, [{ ...item(), price_cents: null, valor: 'Sob consulta' }]);
-  const [after] =
-    await sql`select price_cents,price_observed_at from real_states`;
+    await sql`select price_cents,price_observed_at from listings`;
+  await save(r, [{ ...item(), price_cents: null }]);
+  const [after] = await sql`select price_cents,price_observed_at from listings`;
   assert.deepEqual(after, before);
 });
 test('AC54 confirmed removal retains history and marks', async () => {
   const r = await begin('validate');
   await save(r, [item()]);
-  await sql`insert into property_mark(user_id,listing_link,status) values(${owner},${item().link},'favorite')`;
-  await save(r, [{ ...item(), verification: 'removed' }]);
+  await sql`insert into listing_marks(user_id,listing_id,status) select ${owner},id,'favorite' from listings where url=${item().url}`;
+  await save(r, [{ ...item(), last_check_result: 'removed' }]);
   assert.equal(
-    (await sql`select availability from real_states`)[0].availability,
+    (await sql`select availability from listings`)[0].availability,
     'removed',
   );
-  assert.equal((await sql`select * from property_price`).length, 1);
-  assert.equal((await sql`select * from property_mark`).length, 1);
+  assert.equal((await sql`select * from listing_price_history`).length, 1);
+  assert.equal((await sql`select * from listing_marks`).length, 1);
 });
-test('AC55 unknown verification preserves confirmed availability', async () => {
+test('AC55 unknown last_check_result preserves confirmed availability', async () => {
   const r = await begin();
   await save(r, [item()]);
-  await save(r, [{ link: item().link, verification: 'unknown' }]);
-  const [p] = await sql`select availability,verification from real_states`;
+  await save(r, [{ url: item().url, last_check_result: 'unknown' }]);
+  const [p] = await sql`select availability,last_check_result from listings`;
   assert.equal(p.availability, 'active');
-  assert.equal(p.verification, 'unknown');
+  assert.equal(p.last_check_result, 'unknown');
 });
 test('AC56 reappearing listing retains same identity and history', async () => {
   const r = await begin();
   await save(r, [item()]);
-  await save(r, [{ ...item(), verification: 'removed' }]);
+  await save(r, [{ ...item(), last_check_result: 'removed' }]);
   await save(r, [item()]);
   assert.equal(
-    (await sql`select availability from real_states`)[0].availability,
+    (await sql`select availability from listings`)[0].availability,
     'active',
   );
-  assert.equal((await sql`select * from real_states`).length, 1);
-  assert.equal((await sql`select * from property_price`).length, 1);
+  assert.equal((await sql`select * from listings`).length, 1);
+  assert.equal((await sql`select * from listing_price_history`).length, 1);
 });
 async function cohort(n: number) {
   const r = await begin();
@@ -317,13 +314,15 @@ async function cohort(n: number) {
       }),
     ),
   ]);
-  await rpc('finish_property_run', {
-    p_run: r.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: r.job_id,
     p_token: r.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
   });
-  return (await sql`select * from real_states where link=${item().link}`)[0];
+  return (await sql`select * from listing_comparisons where url=${item().url}`)[
+    0
+  ];
 }
 test('AC58 five and six peers use subject-excluded median', async () => {
   for (const n of [5, 6]) {
@@ -340,12 +339,12 @@ test('AC59 four peers cannot produce ranking', async () => {
   assert.equal(p.discount_pct, null);
   assert.equal(p.median_m2, null);
 });
-test('AC62 comparison recomputed before completion', async () => {
+test('AC62 comparison is derived at read time after completion', async () => {
   await cohort(5);
-  const [r] = await sql`select finished_at,state from property_run`;
-  const [p] = await sql`select comparison_at from real_states limit 1`;
+  const [r] = await sql`select finished_at,state from crawl_jobs`;
+  const [p] = await sql`select comparison_at from listing_comparisons limit 1`;
   assert.equal(r.state, 'succeeded');
-  assert.ok(p.comparison_at <= r.finished_at);
+  assert.ok(p.comparison_at >= r.finished_at);
 });
 addEventListener('unload', () => {
   sql.end({ timeout: 0 });
@@ -357,7 +356,7 @@ Deno.test({
   sanitizeOps: false,
   fn: async () => {
     await reset();
-    await sql`insert into real_states(link,titulo,valor) values('https://www.wimoveis.com.br/imovel/p','p','R$ 1')`;
+    await sql`insert into listings(url,title,source) values('https://www.wimoveis.com.br/imovel/p','p','wimoveis')`;
     await enqueue();
     const results = await Promise.all(
       ['collect', 'validate', 'worker'].map((kind) =>
@@ -376,104 +375,58 @@ Deno.test({
   },
 });
 
-const { default: postgres } = await import('postgres');
-const migrationText = () =>
-  Deno.readTextFile(
-    'backend/supabase/migrations/20261117235107_property_interface.sql',
+test('MODEL04 portal identity survives URL changes and preserves marks', async () => {
+  const r = await begin();
+  await save(r, [{ ...item(), source_listing_id: '123' }]);
+  const [before] = await sql`select * from listings`;
+  await sql`insert into listing_marks(user_id,listing_id,status) values(${owner},${before.id},'favorite')`;
+  await save(r, [{
+    ...item('https://www.wimoveis.com.br/imovel/renamed'),
+    source_listing_id: '123',
+  }]);
+  const rows = await sql`select * from listings`;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].id, before.id);
+  assert.equal(rows[0].url, 'https://www.wimoveis.com.br/imovel/renamed');
+  assert.equal(
+    (await sql`select * from listing_marks`)[0].listing_id,
+    before.id,
   );
-async function legacyDatabase(
-  values: { link: string; titulo: string; valor: string; created_at: string }[],
-  proof: (db: ReturnType<typeof postgres>) => Promise<void>,
-) {
-  const name = 'property_legacy_' + crypto.randomUUID().replaceAll('-', '');
-  await sql.unsafe('create database ' + name);
-  const db = postgres(config.DB_URL.replace(/\/postgres$/, '/' + name), {
-    max: 1,
-    onnotice: () => {},
-  });
-  try {
-    await db.unsafe(
-      "create schema auth; create function auth.uid() returns uuid language sql as 'select null::uuid';create table real_states(link text primary key,titulo text not null,valor text not null,created_at timestamptz default now());",
-    );
-    for (const row of values) await db`insert into real_states ${db(row)}`;
-    const original =
-      await db`select link,titulo,valor,created_at from real_states order by link`;
-    await db.unsafe(await migrationText());
-    await db.unsafe(await migrationText());
-    assert.deepEqual(
-      await db`select link,titulo,valor,created_at from real_states order by link`,
-      original,
-    );
-    await proof(db);
-  } finally {
-    await db.end();
-    await sql.unsafe('drop database ' + name);
+});
+test('MODEL05 different portals retain separate identities', async () => {
+  const r = await begin();
+  await save(r, [{ ...item(), source_listing_id: '123' }, {
+    ...item('https://www.dfimoveis.com.br/imovel/123'),
+    source: 'dfimoveis',
+    source_listing_id: '123',
+  }]);
+  const rows = await sql`select * from listings`;
+  assert.equal(rows.length, 2);
+  assert.notEqual(rows[0].id, rows[1].id);
+});
+test('MODEL06 multiple real price changes within a job retain every observation', async () => {
+  const r = await begin();
+  for (const price of [120000000, 110000000, 110000000, 100000000]) {
+    await save(r, [item(undefined, price)]);
   }
-}
-const legacyRows = [{
-  link: 'https://legacy.test/a',
-  titulo: 'Primeiro',
-  valor: 'R$ 1.234.567,89',
-  created_at: '2020-01-02T03:04:05Z',
-}, {
-  link: 'https://legacy.test/b',
-  titulo: 'Segundo',
-  valor: 'Sob consulta',
-  created_at: '2021-02-03T04:05:06Z',
-}];
-Deno.test({
-  name: 'AC05 genuine legacy schema retains the complete projection twice',
-  sanitizeResources: false,
-  sanitizeOps: false,
-  fn: () =>
-    legacyDatabase(legacyRows, async (db) => {
-      assert.equal((await db`select * from real_states`).length, 2);
-      assert.equal(
-        (await db`select * from property_price where legacy`).length,
-        1,
-      );
-    }),
-});
-Deno.test({
-  name: 'AC06 migrated legacy row stores exact centavos',
-  sanitizeResources: false,
-  sanitizeOps: false,
-  fn: () =>
-    legacyDatabase([legacyRows[0]], async (db) => {
-      assert.equal(
-        Number((await db`select price_cents from real_states`)[0].price_cents),
-        123456789,
-      );
-    }),
-});
-Deno.test({
-  name: 'AC07 migrated absent ranged and malformed prices stay null',
-  sanitizeResources: false,
-  sanitizeOps: false,
-  fn: () =>
-    legacyDatabase(
-      ['', 'R$ 1.000 a 2.000', 'Consultar', '1.234,567'].map((valor, i) => ({
-        ...legacyRows[0],
-        link: 'https://legacy.test/' + i,
-        valor,
-      })),
-      async (db) => {
-        const rows = await db`select price_cents from real_states`;
-        assert.equal(rows.length, 4);
-        assert.ok(rows.every((r) => r.price_cents === null));
-      },
-    ),
+  const rows = await sql`select * from listing_price_history order by id`;
+  assert.deepEqual(rows.map((x) => Number(x.price_cents)), [
+    120000000,
+    110000000,
+    100000000,
+  ]);
+  assert.ok(rows.every((x) => x.job_id === r.job_id));
 });
 test('AC03 populated reads direct writes and worker RPCs reject non-owner', async () => {
   const run = await begin();
   await save(run, [item()]);
-  await sql`insert into property_mark(user_id,listing_link,status) values(${owner},${item().link},'favorite')`;
-  await sql`insert into property_heartbeat(singleton) values(true)`;
-  await rpc('record_property_source', {
-    p_run: run.run_id,
+  await sql`insert into listing_marks(user_id,listing_id,status) select ${owner},id,'favorite' from listings where url=${item().url}`;
+  await sql`update private.worker_state set seen_at=now()`;
+  await rpc('record_crawl_source', {
+    p_job: run.job_id,
     p_token: run.token,
     p_source: 'wimoveis',
-    p_profile: profile,
+    p_search: profile,
     p_count: 1,
     p_outcome: 'succeeded',
     p_error: null,
@@ -485,17 +438,14 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
     'Content-Type': 'application/json',
     Prefer: 'return=representation',
   };
-  await enqueue();
   const tables = [
-    'property_request',
-    'real_states',
-    'property_mark',
-    'property_profile',
-    'property_run',
-    'property_price',
-    'property_match',
-    'property_source_run',
-    'property_heartbeat',
+    'crawl_jobs',
+    'listings',
+    'listing_marks',
+    'saved_searches',
+    'crawl_jobs',
+    'listing_price_history',
+    'crawl_source_runs',
   ];
   for (const table of tables) {
     assert.ok((await sql.unsafe('select * from ' + table)).length > 0, table);
@@ -503,23 +453,20 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
     assert.deepEqual(await res.json(), [], table);
   }
   const patchFields: Record<string, unknown> = {
-    property_request: { state: 'interrupted' },
-    real_states: { titulo: 'intrusion' },
-    property_mark: { note: 'intrusion' },
-    property_profile: { name: 'intrusion' },
-    property_run: { state: 'failed' },
-    property_price: { price_cents: 1 },
-    property_match: { profile_id: profile },
-    property_source_run: { error_category: 'intrusion' },
-    property_heartbeat: { seen_at: '2000-01-01T00:00:00Z' },
+    listings: { title: 'intrusion' },
+    listing_marks: { note: 'intrusion' },
+    saved_searches: { name: 'intrusion' },
+    crawl_jobs: { state: 'failed' },
+    listing_price_history: { price_cents: 1 },
+    crawl_source_runs: { error_category: 'intrusion' },
   };
   for (const table of tables) {
     const beforeRows = await sql.unsafe('select * from ' + table);
-    const pk = table === 'real_states'
-      ? 'link'
-      : table === 'property_mark' || table === 'property_match'
-      ? 'listing_link'
-      : table === 'property_heartbeat'
+    const pk = table === 'listings'
+      ? 'url'
+      : table === 'listing_marks'
+      ? 'listing_id'
+      : table === 'private.worker_state'
       ? 'singleton'
       : 'id';
     for (const method of ['PATCH', 'DELETE']) {
@@ -545,182 +492,185 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
       assert.deepEqual(await sql.unsafe('select * from ' + table), beforeRows);
     }
   }
-  assert.equal((await rpc('seed_property_profile', {}, jwt)).status, 403);
-  const before = await sql`select titulo from real_states`;
+  assert.equal((await rpc('seed_saved_search', {}, jwt)).status, 403);
+  const before = await sql`select title from listings`;
   for (const method of ['PATCH', 'DELETE']) {
     const res = await fetch(
-      config.API_URL + '/rest/v1/real_states?link=eq.' +
-        encodeURIComponent(item().link),
+      config.API_URL + '/rest/v1/listings?url=eq.' +
+        encodeURIComponent(item().url),
       {
         method,
         headers,
         body: method === 'PATCH'
-          ? JSON.stringify({ titulo: 'intrusion' })
+          ? JSON.stringify({ title: 'intrusion' })
           : undefined,
       },
     );
     const body = await res.json();
     assert.ok(res.status >= 400 || Array.isArray(body) && body.length === 0);
   }
-  const insert = await fetch(config.API_URL + '/rest/v1/property_profile', {
+  const insert = await fetch(config.API_URL + '/rest/v1/saved_searches', {
     method: 'POST',
     headers,
     body: JSON.stringify({
-      name: 'intrusion',
-      params: (await sql`select params from property_profile`)[0].params,
-      providers: ['wimoveis'],
+      ...toSearchRow(
+        fromSearchRow(
+          (await sql`select * from saved_searches`)[0] as SearchRow,
+        ),
+      ),
     }),
   });
   assert.ok(insert.status >= 400);
-  const mark = await fetch(config.API_URL + '/rest/v1/property_mark', {
+  const mark = await fetch(config.API_URL + '/rest/v1/listing_marks', {
     method: 'POST',
     headers,
     body: JSON.stringify({
       user_id: other,
-      listing_link: item().link,
+      listing_id: (await sql`select id from listings`)[0].id,
       status: 'favorite',
     }),
   });
   assert.ok(mark.status >= 400);
   for (
     const [name, args] of [
-      ['claim_property_run', { p_kind: 'collect' }],
-      ['save_property_batch', {
-        p_run: run.run_id,
+      ['claim_crawl_job', { p_kind: 'collect' }],
+      ['save_listing_batch', {
+        p_job: run.job_id,
         p_token: run.token,
         p_items: [],
-        p_profile: null,
+        p_search: null,
       }],
-      ['finish_property_run', {
-        p_run: run.run_id,
+      ['finish_crawl_job', {
+        p_job: run.job_id,
         p_token: run.token,
         p_state: 'succeeded',
         p_email: 'sent',
       }],
-      ['renew_property_lease', { p_run: run.run_id, p_token: run.token }],
-      ['record_property_source', {
-        p_run: run.run_id,
+      ['renew_worker_lease', { p_job: run.job_id, p_token: run.token }],
+      ['record_crawl_source', {
+        p_job: run.job_id,
         p_token: run.token,
         p_source: 'x',
-        p_profile: null,
+        p_search: null,
         p_count: 0,
         p_outcome: 'failed',
         p_error: null,
       }],
     ] as const
   ) assert.equal((await rpc(name, args, jwt)).status, 403);
-  assert.deepEqual(await sql`select titulo from real_states`, before);
-  assert.equal((await sql`select * from property_mark`).length, 1);
+  assert.deepEqual(await sql`select title from listings`, before);
+  assert.equal((await sql`select * from listing_marks`).length, 1);
 });
-test('AC28 all invalid profile families preserve every stored field', async () => {
-  const [original] = await sql`select * from property_profile`;
-  const p = original.params;
+test('AC28 all invalid typed search families preserve every stored field', async () => {
+  const [original] = await sql`select * from saved_searches`;
   const invalid = [
-    { ...p, neighborhoods: ['unknown'] },
-    { ...p, neighborhoods: [null] },
-    { ...p, numberOfRooms: [1.5] },
-    { ...p, numberOfRooms: [-1] },
-    { ...p, numberOfSuites: -1 },
-    { ...p, numberOfSuites: 0.5 },
-    ...['minArea', 'maxArea', 'minPrice', 'maxPrice'].flatMap(
-      (k) => [
-        { ...p, [k]: -1 },
-        { ...p, [k]: null },
-        { ...p, [k]: 'Infinity' },
-        { ...p, [k]: 'NaN' },
-      ],
-    ),
+    { neighborhoods: ['unknown'] },
+    { neighborhoods: [null] },
+    { bedrooms: [null] },
+    { bedrooms: [-1] },
+    { min_suites: -1 },
+    { min_suites: 11 },
+    ...['min_area_m2', 'max_area_m2', 'min_price_cents', 'max_price_cents']
+      .flatMap(
+        (
+          k,
+        ) => [{ [k]: -1 }, { [k]: null }, { [k]: 'Infinity' }, { [k]: 'NaN' }],
+      ),
   ];
-  for (const params of invalid) {
+  for (const patch of invalid) {
     await assert.rejects(() =>
-      sql`update property_profile set params=${
-        sql.json(params)
-      },name='changed' where id=${profile}`
+      sql`update saved_searches set ${
+        sql({ ...patch, name: 'changed' })
+      } where id=${profile}`
     );
-    assert.deepEqual((await sql`select * from property_profile`)[0], original);
+    assert.deepEqual((await sql`select * from saved_searches`)[0], original);
   }
 });
 test('AC35 running request remains the sole busy identity', async () => {
   const a = await enqueue();
-  await rpc('claim_property_run', { p_kind: 'worker' });
+  await rpc('claim_crawl_job', { p_kind: 'worker' });
   const b = await enqueue();
   assert.equal(b.body.outcome, 'busy');
-  assert.equal(b.body.request_id, a.body.request_id);
-  assert.equal((await sql`select * from property_request`).length, 1);
+  assert.equal(b.body.job_id, a.body.job_id);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
 });
 test('AC36 rate boundary preserves identity below sixty and accepts beyond sixty', async () => {
   const a = await enqueue();
-  await sql`update property_request set state='succeeded',created_at=clock_timestamp()-interval '59 seconds'`;
+  await sql`update crawl_jobs set state='succeeded',created_at=clock_timestamp()-interval '59 seconds'`;
   const denied = await enqueue();
   assert.equal(denied.body.outcome, 'rate_limited');
-  assert.equal((await sql`select * from property_request`).length, 1);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
   assert.equal(
-    (await sql`select id from property_request`)[0].id,
-    a.body.request_id,
+    (await sql`select id from crawl_jobs`)[0].id,
+    a.body.job_id,
   );
-  await sql`update property_request set created_at=clock_timestamp()-interval '60 seconds'`;
+  await sql`update crawl_jobs set created_at=clock_timestamp()-interval '60 seconds'`;
   const accepted = await enqueue();
   assert.equal(accepted.body.outcome, 'accepted');
-  assert.equal((await sql`select * from property_request`).length, 2);
+  assert.equal((await sql`select * from crawl_jobs`).length, 2);
 });
 test('AC39 every fenced run mutation rejects expired ownership atomically', async () => {
   await enqueue();
-  const r = (await rpc('claim_property_run', { p_kind: 'worker' })).body;
+  const r = (await rpc('claim_crawl_job', { p_kind: 'worker' })).body;
   await save(r, [item()]);
-  await sql`update private.property_lease set expires_at=clock_timestamp()-interval '1 second'`;
-  const before = await sql`select * from property_run`;
-  const listingBefore = await sql`select * from real_states`;
-  const requestBefore = await sql`select * from property_request`;
+  await sql`update private.worker_state set lease_expires_at=clock_timestamp()-interval '1 second'`;
+  const before = await sql`select * from crawl_jobs`;
+  const listingBefore = await sql`select * from listings`;
+  const requestBefore = await sql`select * from crawl_jobs`;
   for (
-    const [name, args] of [['renew_property_lease', {
-      p_run: r.run_id,
+    const [name, args] of [['renew_worker_lease', {
+      p_job: r.job_id,
       p_token: r.token,
-    }], ['record_property_source', {
-      p_run: r.run_id,
+    }], ['record_crawl_source', {
+      p_job: r.job_id,
       p_token: r.token,
       p_source: 'x',
-      p_profile: null,
+      p_search: null,
       p_count: 99,
       p_outcome: 'failed',
       p_error: 'bad',
-    }], ['finish_property_run', {
-      p_run: r.run_id,
+    }], ['finish_crawl_job', {
+      p_job: r.job_id,
       p_token: r.token,
       p_state: 'succeeded',
       p_email: 'sent',
-    }], ['save_property_batch', {
-      p_run: r.run_id,
+    }], ['save_listing_batch', {
+      p_job: r.job_id,
       p_token: r.token,
       p_items: [item(undefined, 1)],
-      p_profile: profile,
+      p_search: profile,
     }]] as const
   ) assert.equal((await rpc(name, args)).status, 400);
-  assert.deepEqual(await sql`select * from property_run`, before);
-  assert.deepEqual(await sql`select * from real_states`, listingBefore);
-  assert.deepEqual(await sql`select * from property_request`, requestBefore);
-  assert.equal((await sql`select * from property_source_run`).length, 0);
+  assert.deepEqual(await sql`select * from crawl_jobs`, before);
+  assert.deepEqual(await sql`select * from listings`, listingBefore);
+  assert.deepEqual(await sql`select * from crawl_jobs`, requestBefore);
+  assert.equal((await sql`select * from crawl_source_runs`).length, 0);
 });
 test('AC51 changed observation is bound to the second run and exact value', async () => {
   let r = await begin();
   await save(r, [item()]);
-  await rpc('finish_property_run', {
-    p_run: r.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: r.job_id,
     p_token: r.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
   });
   r = await begin();
   await save(r, [item(undefined, 110000000)]);
-  const rows = await sql`select * from property_price where run_id=${r.run_id}`;
+  const rows =
+    await sql`select * from listing_price_history where job_id=${r.job_id}`;
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].listing_link, item().link);
+  assert.equal(
+    rows[0].listing_id,
+    (await sql`select id from listings where url=${item().url}`)[0].id,
+  );
   assert.equal(Number(rows[0].price_cents), 110000000);
 });
 test('AC52 unchanged price in a new run appends no observation', async () => {
   const first = await begin();
   await save(first, [item()]);
-  await rpc('finish_property_run', {
-    p_run: first.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: first.job_id,
     p_token: first.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
@@ -728,9 +678,9 @@ test('AC52 unchanged price in a new run appends no observation', async () => {
   const second = await begin();
   await save(second, [item()]);
   await save(second, [item()]);
-  assert.equal((await sql`select * from property_price`).length, 1);
+  assert.equal((await sql`select * from listing_price_history`).length, 1);
   assert.equal(
-    (await sql`select * from property_price where run_id=${second.run_id}`)
+    (await sql`select * from listing_price_history where job_id=${second.job_id}`)
       .length,
     0,
   );
@@ -747,33 +697,34 @@ test('AC58 ineligible peers excluded and subject discount is exact', async () =>
   for (
     const [i, extra] of [
       { availability: 'removed' },
-      { area: 0 },
+      { area_m2: 0 },
       { price_cents: 0 },
-      { rooms: 4 },
+      { bedrooms: 4 },
       { neighborhood: 'asa-sul' },
     ].entries()
   ) {
-    await sql`insert into real_states ${
+    await sql`insert into listings ${
       sql({
-        link: 'https://excluded.test/' + i,
-        titulo: 'Excluded',
-        valor: 'x',
+        url: 'https://excluded.test/' + i,
+        title: 'Excluded',
+        source: 'wimoveis',
         availability: 'active',
-        area: 100,
+        area_m2: 100,
         price_cents: 1,
-        rooms: 3,
+        bedrooms: 3,
         neighborhood: 'asa-norte',
         ...extra,
       })
     }`;
   }
-  await rpc('finish_property_run', {
-    p_run: r.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: r.job_id,
     p_token: r.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
   });
-  const [p] = await sql`select * from real_states where link=${item().link}`;
+  const [p] =
+    await sql`select * from listing_comparisons where url=${item().url}`;
   assert.equal(p.peer_count, 5);
   assert.equal(Number(p.median_m2), 12000);
   assert.equal(Number(p.discount_pct), 25);
@@ -782,18 +733,19 @@ test('AC62 committed price change refreshes comparisons before completion', asyn
   await cohort(5);
   const r = await begin();
   await save(r, [item('https://peer.test/0', 200000000)]);
-  await rpc('finish_property_run', {
-    p_run: r.run_id,
+  await rpc('finish_crawl_job', {
+    p_job: r.job_id,
     p_token: r.token,
     p_state: 'succeeded',
     p_email: 'not_needed',
   });
-  const [p] = await sql`select * from real_states where link=${item().link}`;
-  const [run] = await sql`select * from property_run where id=${r.run_id}`;
+  const [p] =
+    await sql`select * from listing_comparisons where url=${item().url}`;
+  const [run] = await sql`select * from crawl_jobs where id=${r.job_id}`;
   assert.equal(Number(p.median_m2), 13000);
   assert.ok(Math.abs(Number(p.discount_pct) - 100 / 13) < 1e-8);
   assert.equal(run.state, 'succeeded');
-  assert.ok(p.comparison_at <= run.finished_at);
+  assert.ok(p.comparison_at >= run.finished_at);
 });
 for (const code of ['AC58', 'AC59']) {
   Deno.test({
@@ -817,7 +769,7 @@ for (
 ) {
   Deno.test({
     name: code +
-      ' actual provider verification persists each classified outcome',
+      ' actual provider last_check_result persists each classified outcome',
     sanitizeResources: false,
     sanitizeOps: false,
     fn: async () => {
@@ -831,7 +783,7 @@ for (
 
 test('AC28 padded names obey raw persisted length and retain a valid eighty-character boundary', async () => {
   const [original] =
-    await sql`select * from property_profile where id=${profile}`;
+    await sql`select * from saved_searches where id=${profile}`;
   try {
     for (
       const name of [
@@ -842,20 +794,78 @@ test('AC28 padded names obey raw persisted length and retain a valid eighty-char
       ]
     ) {
       await assert.rejects(() =>
-        sql`update property_profile set name=${name} where id=${profile}`
+        sql`update saved_searches set name=${name} where id=${profile}`
       );
       assert.deepEqual(
-        (await sql`select * from property_profile where id=${profile}`)[0],
+        (await sql`select * from saved_searches where id=${profile}`)[0],
         original,
       );
     }
     const valid = ' ' + 'x'.repeat(79);
-    await sql`update property_profile set name=${valid} where id=${profile}`;
+    await sql`update saved_searches set name=${valid} where id=${profile}`;
     const [row] =
-      await sql`select name,char_length(name) as n from property_profile where id=${profile}`;
+      await sql`select name,char_length(name) as n from saved_searches where id=${profile}`;
     assert.equal(row.name, valid);
     assert.equal(row.n, 80);
   } finally {
-    await sql`update property_profile set name=${original.name} where id=${profile}`;
+    await sql`update saved_searches set name=${original.name} where id=${profile}`;
   }
+});
+
+test('MODEL07 owner health RPC hides coordination state from other identities', async () => {
+  await rpc('record_worker_heartbeat', {});
+  const health = await rpc('worker_health', {}, await token());
+  assert.equal(health.status, 200);
+  assert.ok(Math.abs(Date.now() - new Date(health.body).getTime()) < 5000);
+  assert.equal(
+    (await rpc('worker_health', {}, await token(other))).status,
+    403,
+  );
+  assert.equal(
+    (await rpc('record_worker_heartbeat', {}, await token())).status,
+    403,
+  );
+  const hidden = await fetch(config.API_URL + '/rest/v1/worker_state', {
+    headers: {
+      apikey: config.ANON_KEY,
+      Authorization: 'Bearer ' + await token(),
+    },
+  });
+  assert.equal(hidden.status, 404);
+  const view = await fetch(config.API_URL + '/rest/v1/listing_comparisons', {
+    headers: {
+      apikey: config.ANON_KEY,
+      Authorization: 'Bearer ' + await token(other),
+    },
+  });
+  assert.deepEqual(await view.json(), []);
+});
+test('MODEL08 active verification preserves observed price timestamp and clears removal', async () => {
+  const r = await begin();
+  await save(r, [item()]);
+  const [before] = await sql`select * from listings`;
+  await save(r, [{ ...item(), last_check_result: 'removed' }]);
+  assert.ok((await sql`select removed_at from listings`)[0].removed_at);
+  await save(r, [{ ...item(), last_check_result: 'active' }]);
+  const [after] = await sql`select * from listings`;
+  assert.equal(after.availability, 'active');
+  assert.equal(after.removed_at, null);
+  assert.deepEqual(after.price_observed_at, before.price_observed_at);
+  assert.equal((await sql`select * from listing_price_history`).length, 1);
+});
+test('MODEL09 concurrent initial seeding creates only one default search', async () => {
+  await sql`delete from saved_searches`;
+  const results = await Promise.all(
+    Array.from({ length: 4 }, () => rpc('seed_saved_search', {})),
+  );
+  assert.deepEqual(results.map((r) => r.status), [204, 204, 204, 204]);
+  assert.equal((await sql`select * from saved_searches`).length, 1);
+});
+test('MODEL10 queued job keeps its identity through claim and blocks direct CLI bypass', async () => {
+  const queued = await enqueue();
+  assert.equal(await begin('collect'), null);
+  assert.equal(await begin('validate'), null);
+  const claimed = await begin('worker');
+  assert.equal(claimed.job_id, queued.body.job_id);
+  assert.equal((await sql`select * from crawl_jobs`).length, 1);
 });

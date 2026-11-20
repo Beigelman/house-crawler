@@ -3,12 +3,12 @@ import { check } from '../../lib/query-result';
 
 export async function dashboard() {
   const count = async (column?: string, value?: string, since?: string) => {
-    let q = supabase.from('real_states').select('link', {
+    let q = supabase.from('listings').select('url', {
       count: 'exact',
       head: true,
     });
     if (column && value) q = q.eq(column, value);
-    if (since) q = q.gte('created_at', since);
+    if (since) q = q.gte('first_seen_at', since);
     const r = await q;
     check(r);
     return r.count ?? 0;
@@ -22,10 +22,10 @@ export async function dashboard() {
     ),
     count('source', 'dfimoveis'),
     count('source', 'wimoveis'),
-    supabase.from('property_run').select('*').order('started_at', {
+    supabase.from('crawl_jobs').select('*').order('started_at', {
       ascending: false,
     }).limit(1).then(check),
-    supabase.from('property_heartbeat').select('*').limit(1).then(check),
+    supabase.rpc('worker_health').then(check),
   ]);
   return {
     active,
@@ -33,6 +33,6 @@ export async function dashboard() {
     df,
     wi,
     run: runs?.[0],
-    heartbeat: hb?.[0]?.seen_at,
+    heartbeat: hb,
   };
 }
