@@ -1,7 +1,24 @@
 import { load } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
 import { parseBRL } from './parse-brl.ts';
 import { type ScrapedListing } from '../../../../shared/property.ts';
 import { normalizeWhitespace, sanitizeUrl } from './html-utils.ts';
+
+function parseWimoveisPrice($: CheerioAPI): number | null {
+  const priceBlocks = $('div.price-value');
+  for (const block of priceBlocks) {
+    const price = $(block).text().match(/\bvenda\s*R\$\s*([\d.]+(?:,\d+)?)/i);
+    const cents = parseBRL(price?.[1] ?? '');
+    if (cents != null) return cents;
+  }
+
+  const title = normalizeWhitespace($('title').first().text());
+  const titlePrice = title.match(
+    /(?:^|\s)à venda\b.* - R\$\s*([\d.]+(?:,\d+)?)(?:, \d+(?:[.,]\d+)?\s*m[²2])? - ID:\s*\d+ - Wimoveis$/i,
+  );
+  return parseBRL(priceBlocks.first().text()) ??
+    parseBRL(titlePrice?.[1] ?? '');
+}
 
 export function parsePropertyHtml(
   html: string,
@@ -33,14 +50,17 @@ export function parsePropertyHtml(
     | Record<string, unknown>
     | undefined;
   const amount = offers?.price;
-  const priceSelector = source === 'dfimoveis'
-    ? 'p.precoAntigoSalao'
-    : 'div.price-value';
-  const raw = normalizeWhitespace($(priceSelector).first().text());
   const numeric =
     amount != null && Number.isFinite(Number(amount)) && Number(amount) > 0
       ? Math.round(Number(amount) * 100)
-      : parseBRL(raw);
+      : source === 'wimoveis'
+      ? parseWimoveisPrice($)
+      : parseBRL(
+        normalizeWhitespace(
+          $(source === 'dfimoveis' ? 'p.precoAntigoSalao' : 'div.price-value')
+            .first().text(),
+        ),
+      );
   const num = (pattern: RegExp) => {
     const m = text.match(pattern);
     return m ? Number(m[1].replace(',', '.')) : null;
