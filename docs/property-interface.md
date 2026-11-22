@@ -43,7 +43,7 @@ Somente esse UUID recebe acesso. Não use `user_metadata` editável para autoriz
 6. Confira grants e RLS para as seis tabelas públicas e a view `listing_comparisons`; rode os advisors do Supabase. Os RPCs de worker só têm EXECUTE para `service_role`; o enqueue confere a identidade dentro do banco, com search path fixo. Não habilite acesso anônimo para resolver erros.
 7. Configure URL do site e redirect allowlist do Auth para `https://SEU-DOMINIO/login` (e localhost apenas no projeto de desenvolvimento). O cliente usa magic link sem criar usuários. A sessão restaura o caminho privado solicitado.
 8. Defina **somente** `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no build estático. Rode `pnpm --dir frontend install --frozen-lockfile` e `pnpm --dir frontend run build`. Publique `frontend/dist`; `_redirects` e `vercel.json` fornecem exemplos de fallback SPA. Abrir diretamente `/imoveis`, `/buscas` ou `/execucoes` deve retornar o shell com HTTP 200.
-9. Inicie `deno task --config backend/deno.json worker` no host onde os portais funcionam. `deno task --config backend/deno.json run` e `deno task --config backend/deno.json validate` continuam disponíveis; todos usam o mesmo lease. Retome os timers existentes após validar o novo caminho. Os horários desses timers não mudaram.
+9. Instale o worker e o timer de validação conforme [o guia Linux](../backend/scripts/SYSTEMD-SETUP.md) no host onde os portais funcionam. `deno task --config backend/deno.json run` e `deno task --config backend/deno.json validate` continuam disponíveis; todos usam o mesmo lease. O antigo timer de coleta deve ficar desabilitado, pois o worker agenda as coletas.
 
 ## Worker persistente
 
@@ -61,7 +61,7 @@ O worker precisa estar em execução e o computador acordado para iniciar coleta
 
 Para manter somente a fila manual ou continuar usando timers externos, defina `WORKER_SCHEDULE_ENABLED=false` no `backend/.env` e reinicie o worker. O padrão é agendamento habilitado.
 
-O arquivo `backend/scripts/house-worker.service` é um exemplo de **serviço systemd de usuário**. Ajuste WorkingDirectory, EnvironmentFile e o caminho do executável Deno para seu host antes de instalar. Não instala nem modifica os timers existentes. Em hosts sem systemd, use o supervisor já escolhido para executar o mesmo comando.
+No Linux com systemd, execute `bash backend/scripts/install-systemd.sh` como o usuário do worker. O instalador preenche os caminhos e instala um **serviço de sistema**, executado com esse usuário, que inicia no boot sem login e reinicia quando o processo termina. Também mantém o timer de validação e desabilita o antigo timer de coleta. Consulte [a configuração completa](../backend/scripts/SYSTEMD-SETUP.md). Em hosts sem systemd, use o supervisor já escolhido para executar `backend/scripts/run-house-worker.sh`.
 
 Saídas: 0 para execução concluída, 1 para parcial/falha, 2 para coletor ocupado. Resumos incluem o UUID da execução. O daemon permanece ativo entre execuções. Credenciais e detalhes arbitrários de exceções não entram nos diagnósticos persistidos.
 

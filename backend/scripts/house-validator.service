@@ -5,17 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=beigelman
-WorkingDirectory=/home/beigelman/dev/house-crawler/backend
-ExecStart=/home/beigelman/dev/house-crawler/backend/scripts/run-house-validator.sh
+User=@RUN_USER@
+WorkingDirectory="@BACKEND_DIR@"
+Environment="DENO_BIN=@DENO_BIN@"
+ExecStart=/bin/bash "@EXEC_BACKEND_DIR@/scripts/run-house-validator.sh"
 StandardOutput=journal
 StandardError=journal
-
-# Variáveis de ambiente (se necessário)
-# Environment="SUPABASE_URL=your-url"
-# Environment="SUPABASE_KEY=your-key"
-# OU melhor: usar EnvironmentFile
-# EnvironmentFile=/home/beigelman/dev/house-crawler/backend/.env
 
 [Install]
 WantedBy=multi-user.target

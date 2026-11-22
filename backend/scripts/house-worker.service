@@ -2,15 +2,16 @@
 Description=House Crawler request worker
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-WorkingDirectory=%h/dev/house-crawler/backend
-EnvironmentFile=%h/dev/house-crawler/backend/.env
-# Adjust this executable to the installed Deno binary on the worker host.
-ExecStart=/usr/bin/env deno task worker
-Restart=on-failure
+User=@RUN_USER@
+WorkingDirectory="@BACKEND_DIR@"
+Environment="DENO_BIN=@DENO_BIN@"
+ExecStart=/bin/bash "@EXEC_BACKEND_DIR@/scripts/run-house-worker.sh"
+Restart=always
 RestartSec=10
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target

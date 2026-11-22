@@ -3,9 +3,9 @@
 set -u
 
 HEALTHCHECK_URL="https://hc-ping.com/af4476eb-2f53-40ce-8a32-8b0ce6b14f69"
-PROJECT_DIR="/home/beigelman/dev/house-crawler/backend"
-DENO_BIN="/home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno"
-CURL_BIN="/usr/bin/curl"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DENO_BIN="${DENO_BIN:-deno}"
+CURL_BIN="${CURL_BIN:-curl}"
 
 ping_healthcheck() {
     "$CURL_BIN" -fsS --retry 3 --max-time 10 "$1" >/dev/null || true

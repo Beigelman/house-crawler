@@ -102,6 +102,10 @@ reais. Os testes de navegador incluem login, filtros, notas, buscas, fila,
 responsividade e navegação por teclado.
 
 Alterações de schema seguem novas migrations em `backend/supabase/migrations/`.
-O histórico aplicado não deve ser reescrito. Para implantar ou operar serviços
-systemd, consulte o [guia de operação](docs/property-interface.md) e
+O histórico aplicado não deve ser reescrito.
+
+No Linux com systemd, após configurar `backend/.env`, execute
+`bash backend/scripts/install-systemd.sh`. O worker inicia no boot e reinicia
+se terminar; o validador mantém o timer existente às 00h, 08h e 16h.
+Para implantar ou operar os serviços, consulte o [guia de operação](docs/property-interface.md) e
 [backend/scripts/SYSTEMD-SETUP.md](backend/scripts/SYSTEMD-SETUP.md).

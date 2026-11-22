@@ -1,8 +1,8 @@
 cron-logs:
-	journalctl -u house-crawler.service -f
+	journalctl -u house-worker.service -f
 
 cron-logs-last:
-	journalctl -u house-crawler.service -n 50 -r
+	journalctl -u house-worker.service -n 50 -r
 
 validator-logs:
 	journalctl -u house-validator.service -f

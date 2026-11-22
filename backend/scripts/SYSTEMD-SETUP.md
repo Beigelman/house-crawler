@@ -1,237 +1,85 @@
-# Configuração do systemd Timer
+# Execução no Linux
 
-Este documento explica como usar o systemd timer para executar o crawler
-automaticamente às **06h, 14h e 22h** todos os dias, e o validador às
-**00h, 08h e 16h** todos os dias.
+Os dois scripts de execução são:
 
-## 📋 Arquivos criados
+- `run-house-validator.sh`: executa `deno task validate` uma vez e envia os pings
+  existentes de início, sucesso ou falha para Healthchecks.io.
+- `run-house-worker.sh`: executa `deno task worker` continuamente. O worker
+  processa a fila e agenda as coletas às 06h, 14h e 22h em America/Sao_Paulo.
 
-- `house-crawler.service` - Define o serviço que executa o crawler via script
-- `house-crawler.timer` - Define os horários de execução (06h, 14h e 22h)
-- `run-house-crawler.sh` - Executa o crawler com pings de start, sucesso e falha para Healthchecks.io
-- `house-validator.service` - Define o serviço que executa o validador via script
-- `house-validator.timer` - Define os horários de execução (00h, 08h e 16h)
-- `run-house-validator.sh` - Executa o validador com pings de start, sucesso e falha para Healthchecks.io
-- `install-systemd.sh` - Script para instalar e configurar automaticamente
+O agendador existente do validador é um **timer systemd**, apesar do nome
+`cron-logs` no Makefile. Ele permanece às **00h, 08h e 16h**, no fuso do host,
+com recuperação após desligamento e atraso aleatório de até 5 minutos.
+Não adicione também uma entrada no crontab para o mesmo comando.
 
-## 🚀 Instalação Rápida
+## Instalação
 
-```bash
-# A partir da raiz do repositório
-cd backend/scripts
-# Execute o script de instalação
-./install-systemd.sh
+Requer Linux com systemd, Bash, Deno, curl e acesso sudo. Mantenha o repositório
+em um disco disponível no boot. Execute como o usuário que deve rodar o worker,
+sem colocar `sudo` antes do instalador:
+
+```sh
+# A partir da raiz do repositório:
+cp backend/.env.example backend/.env  # Somente se o .env ainda não existir
+# Preencha backend/.env com as credenciais do worker.
+bash backend/scripts/install-systemd.sh
 ```
 
-Pronto! O crawler agora rodará automaticamente às 06h, 14h e 22h todos os dias,
-e o validador às 00h, 08h e 16h todos os dias.
+O instalador usa sudo para instalar as unidades em `/etc/systemd/system/`.
+Ele detecta o usuário, o diretório do backend e o binário real do Deno,
+inclusive quando instalado pelo mise. Não depende do PATH de um shell interativo
+no boot. Para escolher outro Deno:
 
-## 🔧 Instalação Manual
-
-Se preferir instalar manualmente:
-
-```bash
-# 1. Copiar arquivos para /etc/systemd/system/
-sudo cp house-crawler.service /etc/systemd/system/
-sudo cp house-crawler.timer /etc/systemd/system/
-sudo cp house-validator.service /etc/systemd/system/
-sudo cp house-validator.timer /etc/systemd/system/
-
-# 2. Recarregar systemd
-sudo systemctl daemon-reload
-
-# 3. Habilitar os timers
-sudo systemctl enable house-crawler.timer
-sudo systemctl enable house-validator.timer
-
-# 4. Iniciar os timers
-sudo systemctl start house-crawler.timer
-sudo systemctl start house-validator.timer
-
-# 5. Verificar status
-systemctl status house-crawler.timer
-systemctl status house-validator.timer
+```sh
+DENO_BIN=/caminho/absoluto/deno bash backend/scripts/install-systemd.sh
 ```
 
-## 📊 Comandos Úteis
+O serviço `house-worker.service` inicia imediatamente e a cada boot, mesmo sem
+login, e reinicia 10 segundos após o processo terminar. Um `systemctl stop`
+explícito mantém o serviço parado até iniciá-lo novamente ou reiniciar o host.
+O timer `house-validator.timer` é habilitado. O antigo `house-crawler.timer`
+é desabilitado para evitar coletas duplicadas com o agendamento do worker.
+Remova eventuais agendamentos antigos de coleta no crontab e pare workers
+iniciados manualmente ou como serviços de usuário antes de instalar.
 
-### Ver status do timer
+Os arquivos `.service` do repositório são modelos; use o instalador para preencher
+os caminhos. Ambos os comandos carregam `backend/.env` pela aplicação Deno.
+Após mover o repositório ou trocar a versão instalada do Deno, execute novamente
+o instalador. Após editar `.env`, reinicie o worker.
 
-```bash
-systemctl status house-crawler.timer
+## Operação
+
+```sh
+systemctl status house-worker.service house-validator.timer
+systemctl is-enabled house-worker.service house-validator.timer
+systemctl list-timers house-validator.timer
+journalctl -u house-worker.service -f
+journalctl -u house-validator.service -n 50
+sudo systemctl restart house-worker.service
+sudo systemctl start house-validator.service  # Validar agora
 ```
 
-### Ver próximas execuções agendadas
+Para executar os scripts manualmente (com Deno no PATH):
 
-```bash
-systemctl list-timers house-crawler.timer house-validator.timer
+```sh
+bash backend/scripts/run-house-validator.sh
+bash backend/scripts/run-house-worker.sh
 ```
 
-### Ver logs em tempo real
+Para alterar os horários da validação, edite `house-validator.timer` e execute
+novamente o instalador; depois rode `sudo systemctl restart house-validator.timer`.
+Para mudar a URL de Healthchecks.io, edite `run-house-validator.sh`. Falhas dos
+pings não alteram o código de saída real da validação.
 
-```bash
-journalctl -u house-crawler.service -f
+Após reiniciar o Linux, confirme com `systemctl status house-worker.service` e
+`journalctl -b -u house-worker.service`. O host precisa estar ligado, acordado e
+com rede para processar as solicitações.
+
+## Remoção
+
+```sh
+bash backend/scripts/uninstall-systemd.sh
 ```
 
-### Ver logs das últimas execuções
-
-```bash
-journalctl -u house-crawler.service -n 50
-```
-
-### Executar manualmente agora
-
-```bash
-sudo systemctl start house-crawler.service
-```
-
-### Parar o timer
-
-```bash
-sudo systemctl stop house-crawler.timer
-```
-
-### Desabilitar o timer (não inicia automaticamente)
-
-```bash
-sudo systemctl disable house-crawler.timer
-```
-
-### Recarregar após alterar arquivos .service ou .timer
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart house-crawler.timer
-sudo systemctl restart house-validator.timer
-```
-
-### Alterar Healthchecks.io
-
-Os scripts enviam ping para Healthchecks.io no início, sucesso e falha:
-
-```bash
-https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e/start
-https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e
-https://hc-ping.com/4896170a-1382-4216-89dd-42c937ba245e/fail
-```
-
-Se a URL mudar, edite `run-house-crawler.sh` e `run-house-validator.sh`. Falhas
-temporárias no ping são ignoradas para preservar o status real do crawler ou
-validador.
-
-## ⚙️ Personalizações
-
-### Alterar horários de execução
-
-Edite o arquivo `house-crawler.timer` e modifique as linhas `OnCalendar`:
-
-```ini
-# Para rodar às 08h e 20h
-OnCalendar=*-*-* 08:00:00
-OnCalendar=*-*-* 20:00:00
-
-# Para rodar apenas às 09h
-OnCalendar=*-*-* 09:00:00
-
-# Para rodar a cada 6 horas
-OnCalendar=*-*-* 00/6:00:00
-
-# Para rodar de segunda a sexta às 09h
-OnCalendar=Mon-Fri *-*-* 09:00:00
-```
-
-Depois de alterar:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart house-crawler.timer
-```
-
-### Adicionar variáveis de ambiente
-
-Edite `house-crawler.service` e adicione suas variáveis:
-
-**Opção 1: Diretamente no arquivo**
-
-```ini
-[Service]
-Environment="SUPABASE_URL=your-url"
-Environment="SUPABASE_KEY=your-key"
-Environment="RESEND_API_KEY=your-key"
-```
-
-**Opção 2: Usando arquivo .env (recomendado)**
-
-```ini
-[Service]
-EnvironmentFile=/home/beigelman/dev/house-crawler/backend/.env
-```
-
-Depois de alterar:
-
-```bash
-sudo systemctl daemon-reload
-```
-
-## 🔍 Verificar se está funcionando
-
-```bash
-# Ver próximas execuções
-systemctl list-timers house-crawler.timer house-validator.timer
-
-# Deve mostrar algo como:
-# NEXT                        LEFT       LAST PASSED UNIT                   ACTIVATES
-# Thu 2025-10-16 14:00:00 -03 2h left    n/a  n/a    house-crawler.timer    house-crawler.service
-# Thu 2025-10-16 16:00:00 -03 4h left    n/a  n/a    house-validator.timer  house-validator.service
-```
-
-## 🐛 Troubleshooting
-
-### Timer não está rodando
-
-```bash
-# Verificar se está ativo
-systemctl is-active house-crawler.timer
-
-# Se não estiver, iniciar
-sudo systemctl start house-crawler.timer
-```
-
-### Ver erros de execução
-
-```bash
-# Ver logs com erros
-journalctl -u house-crawler.service -p err
-
-# Ver todas as execuções (sucesso e falha)
-journalctl -u house-crawler.service --since "24 hours ago"
-```
-
-### Testar execução manual
-
-```bash
-# Executar o serviço manualmente para ver se há erros
-sudo systemctl start house-crawler.service
-
-# Ver resultado
-systemctl status house-crawler.service
-```
-
-### Verificar caminho do Deno
-
-```bash
-# Os scripts usam: /home/beigelman/.local/share/mise/installs/deno/2.8.3/bin/deno
-# Verificar se está correto:
-which deno
-
-# Se diferente, edite run-house-crawler.sh e run-house-validator.sh
-```
-
-## 📝 Notas
-
-- O timer usa `Persistent=true`, o que significa que se o sistema estiver
-  desligado no horário agendado, a execução será feita quando o sistema ligar
-- `RandomizedDelaySec=300` adiciona um atraso aleatório de até 5 minutos para
-  evitar sobrecarga
-- Os logs são armazenados no systemd journal e podem ser visualizados com
-  `journalctl`
+Remove os serviços e timers de sistema, incluindo as unidades antigas do crawler.
+Preserva os arquivos do repositório e o `.env`.
