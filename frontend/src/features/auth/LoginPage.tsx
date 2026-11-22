@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Navigate, useSearchParams } from 'react-router-dom';
-import { sendLoginLink } from './auth.api';
+import { sendLoginLink, signInWithPassword } from './auth.api';
 
 export function LoginPage(
   { session, denied }: { session: Session | null; denied: boolean },
 ) {
-  const [email, setEmail] = useState('');
-  const [state, setState] = useState('idle');
+  const [usePassword, setUsePassword] = useState(false);
+  const [state, setState] = useState<'idle' | 'submitting' | 'sent' | 'error'>(
+    'idle',
+  );
   const [params] = useSearchParams();
   const next = params.get('next');
   const target = next?.startsWith('/') && !next.startsWith('//') &&
@@ -34,35 +36,84 @@ export function LoginPage(
           ⌂ <b>Casa Radar</b>
         </div>
         <h2>Bem-vindo de volta</h2>
-        <p>Acesse seu painel com um link enviado por email.</p>
+        <p>
+          {usePassword
+            ? 'Acesse seu painel com seu email e senha.'
+            : 'Acesse seu painel com um link enviado por email.'}
+        </p>
         {denied && <p role='alert'>Esta conta não tem acesso ao painel.</p>}
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            setState('sending');
-            const { error } = await sendLoginLink(email, target);
-            setState(error ? 'error' : 'sent');
+            if (state === 'submitting') return;
+            const fields = new FormData(e.currentTarget);
+            const email = String(fields.get('email')).trim();
+            setState('submitting');
+            try {
+              if (usePassword) {
+                const { error } = await signInWithPassword(
+                  email,
+                  String(fields.get('password')),
+                );
+                if (error) setState('error');
+                // The session listener runs the owner check and redirects.
+              } else {
+                const { error } = await sendLoginLink(email, target);
+                setState(error ? 'error' : 'sent');
+              }
+            } catch {
+              setState('error');
+            }
           }}
         >
           <label>
             Email<input
+              name='email'
               type='email'
+              autoComplete={usePassword ? 'username' : 'email'}
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
             />
           </label>
+          {usePassword && (
+            <label>
+              Senha<input
+                name='password'
+                type='password'
+                autoComplete='current-password'
+                required
+              />
+            </label>
+          )}
           <button
             type='submit'
             className='primary'
-            disabled={state === 'sending'}
+            disabled={state === 'submitting'}
           >
-            {state === 'sending' ? 'Enviando link…' : 'Enviar link de acesso'}
+            {usePassword
+              ? (state === 'submitting' ? 'Entrando…' : 'Entrar')
+              : (state === 'submitting'
+                ? 'Enviando link…'
+                : 'Enviar link de acesso')}
+          </button>
+          <button
+            type='button'
+            className='quiet'
+            disabled={state === 'submitting'}
+            onClick={() => {
+              setUsePassword(!usePassword);
+              setState('idle');
+            }}
+          >
+            {usePassword ? 'Usar link por email' : 'Entrar com senha'}
           </button>
         </form>
         {state === 'sent' && <p role='status'>Confira seu email</p>}
         {state === 'error' && (
-          <p role='alert'>Não foi possível enviar o link. Tente novamente.</p>
+          <p role='alert'>
+            {usePassword
+              ? 'Não foi possível entrar. Confira seu email e senha e tente novamente.'
+              : 'Não foi possível enviar o link. Tente novamente.'}
+          </p>
         )}
         <small>Acesso privado. Apenas o proprietário pode entrar.</small>
       </section>

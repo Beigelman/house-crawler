@@ -41,7 +41,9 @@ on conflict(singleton) do update set user_id=excluded.user_id;
 Somente esse UUID recebe acesso. Não use `user_metadata` editável para autorização. Um usuário autenticado diferente não pode ler nem escrever imóveis, buscas, execuções ou solicitações.
 
 6. Confira grants e RLS para as seis tabelas públicas e a view `listing_comparisons`; rode os advisors do Supabase. Os RPCs de worker só têm EXECUTE para `service_role`; o enqueue confere a identidade dentro do banco, com search path fixo. Não habilite acesso anônimo para resolver erros.
-7. Configure URL do site e redirect allowlist do Auth para `https://SEU-DOMINIO/login` (e localhost apenas no projeto de desenvolvimento). O cliente usa magic link sem criar usuários. A sessão restaura o caminho privado solicitado.
+7. Configure URL do site e redirect allowlist do Auth para `https://SEU-DOMINIO/login` (e localhost apenas no projeto de desenvolvimento).
+   O proprietário pode entrar com um link por email ou com email e senha. Os dois métodos restauram o caminho privado solicitado.
+   Para ativar a opção de senha em uma conta existente, defina a senha no mesmo usuário do Supabase Auth em um ambiente administrativo confiável. [API administrativa para definir a senha](https://supabase.com/docs/reference/javascript/auth-admin-updateuserbyid)
 8. Defina **somente** `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no build estático. Rode `pnpm --dir frontend install --frozen-lockfile` e `pnpm --dir frontend run build`. Publique `frontend/dist`; `_redirects` e `vercel.json` fornecem exemplos de fallback SPA. Abrir diretamente `/imoveis`, `/buscas` ou `/execucoes` deve retornar o shell com HTTP 200.
 9. Instale o worker e o timer de validação conforme [o guia Linux](../backend/scripts/SYSTEMD-SETUP.md) no host onde os portais funcionam. `deno task --config backend/deno.json run` e `deno task --config backend/deno.json validate` continuam disponíveis; todos usam o mesmo lease. O antigo timer de coleta deve ficar desabilitado, pois o worker agenda as coletas.
 

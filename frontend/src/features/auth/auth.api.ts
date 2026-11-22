@@ -12,6 +12,9 @@ export const onAuthStateChange = supabase.auth.onAuthStateChange.bind(
   supabase.auth,
 );
 
+export const signInWithPassword = (email: string, password: string) =>
+  supabase.auth.signInWithPassword({ email, password });
+
 export function sendLoginLink(email: string, target: string) {
   return supabase.auth.signInWithOtp({
     email,

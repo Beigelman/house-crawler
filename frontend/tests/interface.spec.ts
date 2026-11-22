@@ -119,6 +119,25 @@ test('AC01 login lifecycle and owner route restoration', async ({ page }) => {
   await expect(page.getByText('Enviando link…')).toBeVisible();
   await expect(page.getByText('Confira seu email')).toBeVisible();
 });
+test('AC01 password login retries invalid credentials and restores the requested route', async ({ context }) => {
+  const page = await context.newPage();
+  await page.goto('/imoveis?page=2');
+  await expect(page).toHaveURL(/\/login\?next=/);
+  await page.getByRole('button', { name: 'Entrar com senha' }).click();
+  await page.getByLabel('Email').fill('owner@example.test');
+  const password = page.getByLabel('Senha', { exact: true });
+  const submit = page.getByRole('button', { name: 'Entrar', exact: true });
+  await password.fill('incorrect-password');
+  await submit.click();
+  await expect(page.getByRole('alert')).toContainText(
+    'Confira seu email e senha',
+  );
+
+  await password.fill('local-test-password-123');
+  await submit.click();
+  await expect(page).toHaveURL(/\/imoveis\?page=2$/);
+  await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
+});
 test('AC02 every private route redirects signed-out without cached records', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Sair' }).click();

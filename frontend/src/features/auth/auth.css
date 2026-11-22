@@ -58,9 +58,17 @@
   margin: 25px 0;
 }
 
+.login-form form label + label {
+  margin-top: 14px;
+}
+
 .login-form button {
   width: 100%;
   margin-top: 20px;
+}
+
+.login-form button.quiet {
+  margin-top: 8px;
 }
 
 @media (max-width: 760px) {
