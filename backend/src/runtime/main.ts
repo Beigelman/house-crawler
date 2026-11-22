@@ -4,21 +4,21 @@ import { createDependencies } from './dependencies.ts';
 import { pollWorker } from './poll-worker.ts';
 import { exitCode } from './exit-code.ts';
 import { executeRun } from '../property/application/execute-run.ts';
-import { sanitizeDiagnostic } from '../platform/diagnostics.ts';
+import { logger } from '../platform/logger.ts';
 
 export async function main(kind: CommandKind) {
-  const config = await loadConfiguration();
   try {
+    const config = await loadConfiguration();
     const deps = createDependencies(config);
     if (kind === 'worker') {
       await pollWorker(deps);
       return 0;
     }
     const result = await executeRun(kind, deps);
-    console.log(result.summary);
+    logger.info('command.completed', { command: kind, ...result });
     return exitCode(result.state);
   } catch (e) {
-    console.error('Execução não concluída:', sanitizeDiagnostic(e));
+    logger.error('command.failed', e, { command: kind });
     return 1;
   }
 }

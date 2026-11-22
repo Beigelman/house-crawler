@@ -1,3 +1,4 @@
+import { logger } from '../../platform/logger.ts';
 import { parsePropertyHtml } from './parse-property-html.ts';
 import type { CheerioAPI } from 'cheerio';
 
@@ -27,7 +28,7 @@ export class DfImoveisProvider extends PropertyProvider {
         ? listUrl
         : buildPageUrl(listUrl, page, 'pagina');
 
-      console.log(`Collecting links from list page: ${pageUrl}\n`);
+      logger.info('page.started', { page_url: pageUrl, page });
 
       const $ = await this.getDocument(pageUrl);
       const pageLinks = this.extractListingLinks($);

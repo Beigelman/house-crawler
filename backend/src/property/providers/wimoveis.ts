@@ -1,3 +1,4 @@
+import { logger } from '../../platform/logger.ts';
 import { parsePropertyHtml } from './parse-property-html.ts';
 import type { CheerioAPI } from 'cheerio';
 
@@ -63,7 +64,7 @@ export class WimoveisProvider extends PropertyProvider {
     for (let page = 1; page <= numberOfPages; page++) {
       const pageUrl = page === 1 ? listUrl : buildPageUrl(listUrl, page);
 
-      console.log(`Collecting links from list page: ${pageUrl}\n`);
+      logger.info('page.started', { page_url: pageUrl, page });
 
       const $ = await this.getDocument(pageUrl);
       const pageLinks = this.extractListingLinks($);

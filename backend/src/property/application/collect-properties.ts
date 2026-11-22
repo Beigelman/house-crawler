@@ -1,6 +1,7 @@
 import type { ScrapedListing } from '../../../../shared/property.ts';
 import { matchesProfile } from '../domain/matches-profile.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
+import { logger, withLogContext } from '../../platform/logger.ts';
 import type { CrawlJob, Dependencies } from '../ports.ts';
 
 export async function collectProperties(
@@ -17,52 +18,78 @@ export async function collectProperties(
   >();
   for (const profile of run.searches) {
     for (const source of profile.providers) {
-      if (signal.aborted) {
-        throw signal.reason;
-      }
-      let outcome: {
-        properties: ScrapedListing[];
-        outcome: string;
-        error: string | null;
-      };
-      try {
-        outcome = await deps.providers(
-          source,
-          profile.params,
-          signal,
-        ).collect();
-      } catch (e) {
-        outcome = {
-          properties: [],
-          outcome: 'failed',
-          error: sanitizeDiagnostic(e),
-        };
-      }
-      if (outcome.outcome === 'failed') failures++;
-      else {
-        successes++;
-        if (outcome.outcome === 'partial') failures++;
-      }
-      if (outcome.outcome !== 'failed') {
-        const fresh = await deps.store.save(
-          run,
-          outcome.properties,
-          profile.id,
-        );
-        for (const p of fresh) newLinks.add(p.url);
-        for (const p of outcome.properties) {
-          const sources = observations.get(p.url)?.sources ??
-            new Set<string>();
-          sources.add(source);
-          observations.set(p.url, { property: p, sources });
-        }
-      }
-      await deps.store.source(run, {
-        source,
+      await withLogContext({
         search_id: profile.id,
-        count: outcome.properties.length,
-        outcome: outcome.outcome,
-        error_category: outcome.error,
+        provider: source,
+        search_params: profile.params,
+      }, async () => {
+        logger.info('provider.started');
+        let stage = 'collect';
+        let outcomeForLog: string[] = [];
+        try {
+          if (signal.aborted) {
+            throw signal.reason;
+          }
+          let outcome: {
+            properties: ScrapedListing[];
+            outcome: string;
+            error: string | null;
+          };
+          try {
+            outcome = await deps.providers(
+              source,
+              profile.params,
+              signal,
+            ).collect();
+          } catch (e) {
+            logger.error('provider.collect_failed', e);
+            outcome = {
+              properties: [],
+              outcome: 'failed',
+              error: sanitizeDiagnostic(e),
+            };
+          }
+          outcomeForLog = outcome.properties.map((p) => p.url);
+          if (outcome.outcome === 'failed') failures++;
+          else {
+            successes++;
+            if (outcome.outcome === 'partial') failures++;
+          }
+          if (outcome.outcome !== 'failed') {
+            stage = 'save_listings';
+            const fresh = await deps.store.save(
+              run,
+              outcome.properties,
+              profile.id,
+            );
+            for (const p of fresh) newLinks.add(p.url);
+            for (const p of outcome.properties) {
+              const sources = observations.get(p.url)?.sources ??
+                new Set<string>();
+              sources.add(source);
+              observations.set(p.url, { property: p, sources });
+            }
+          }
+          stage = 'save_source_outcome';
+          await deps.store.source(run, {
+            source,
+            search_id: profile.id,
+            count: outcome.properties.length,
+            outcome: outcome.outcome,
+            error_category: outcome.error,
+          });
+          logger.info('provider.completed', {
+            outcome: outcome.outcome,
+            count: outcome.properties.length,
+            error_category: outcome.error,
+          });
+        } catch (e) {
+          logger.error('provider.failed', e, {
+            stage,
+            listing_urls: outcomeForLog,
+          });
+          throw e;
+        }
       });
     }
   }

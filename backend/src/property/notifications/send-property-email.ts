@@ -1,3 +1,4 @@
+import { logger } from '../../platform/logger.ts';
 import { Resend } from 'resend';
 import type { ScrapedListing } from '../../../../shared/property.ts';
 import {
@@ -92,15 +93,17 @@ export async function sendNewPropertiesEmail(
     });
 
     if (error) {
+      logger.error('email.delivery_failed', error);
       return {
         success: false,
         error: `Erro ao enviar email: ${error.message}`,
       };
     }
 
-    console.log(`📧 Email enviado com sucesso! ID: ${data?.id}`);
+    logger.info('email.sent', { email_id: data?.id });
     return { success: true };
   } catch (error) {
+    logger.error('email.failed', error);
     return {
       success: false,
       error: `Exceção ao enviar email: ${

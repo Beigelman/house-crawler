@@ -1,3 +1,5 @@
+import { logger } from './logger.ts';
+
 export const REQUEST_TIMEOUT_MS = 30000;
 
 export class HttpError extends Error {
@@ -40,11 +42,28 @@ export async function fetchWithRetry(
       await response.body?.cancel();
       throw new HttpError(response.status);
     } catch (e) {
-      if (options.signal?.aborted) throw e;
+      if (options.signal?.aborted) {
+        logger.error('http.aborted', e, {
+          request_url: url,
+          attempt: attempt + 1,
+        });
+        throw e;
+      }
       const retry = !(e instanceof HttpError) || e.status === 429 ||
         e.status >= 500;
-      if (!retry || attempt >= 2) throw e;
-      await sleep(attempt === 0 ? 2000 : 4000);
+      const fields = {
+        request_url: url,
+        attempt: attempt + 1,
+        max_attempts: 3,
+        timeout_ms: options.timeoutMs ?? REQUEST_TIMEOUT_MS,
+      };
+      if (!retry || attempt >= 2) {
+        logger.error('http.failed', e, fields);
+        throw e;
+      }
+      const retryDelay = attempt === 0 ? 2000 : 4000;
+      logger.warn('http.retry', e, { ...fields, retry_delay_ms: retryDelay });
+      await sleep(retryDelay);
     }
   }
 }

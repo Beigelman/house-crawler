@@ -8,6 +8,7 @@ import type {
 } from '../../../../shared/property.ts';
 import { parsePropertyHtml } from './parse-property-html.ts';
 import { fetchWithRetry, HttpError } from '../../platform/http-client.ts';
+import { logger, withLogContext } from '../../platform/logger.ts';
 import { sanitizeDiagnostic } from '../../platform/diagnostics.ts';
 
 export interface ProviderConfig {
@@ -57,39 +58,57 @@ export abstract class PropertyProvider {
   async collectOutcome(): Promise<
     { properties: ScrapedListing[]; outcome: string; error: string | null }
   > {
-    const properties: ScrapedListing[] = [];
-    let failed = 0;
-    let error: string | null = null;
-    try {
-      const links = await this.collectListingLinks(
-        this.buildListUrl(this.searchParams),
-      );
-      for (const url of links) {
-        this.signal?.throwIfAborted();
-        try {
-          const p = await this.parseProperty(url);
-          if (!p.title) throw new Error('parse title missing');
-          properties.push(p);
-        } catch (e) {
-          failed++;
-          error = sanitizeDiagnostic(e);
+    return await withLogContext({
+      provider_name: this.name,
+      search_params: this.searchParams,
+    }, async () => {
+      const properties: ScrapedListing[] = [];
+      let failed = 0;
+      let error: string | null = null;
+      try {
+        const links = await this.collectListingLinks(
+          this.buildListUrl(this.searchParams),
+        );
+        logger.info('listings.discovered', { count: links.length });
+        for (const url of links) {
+          this.signal?.throwIfAborted();
+          await withLogContext({ listing_url: url }, async () => {
+            const started = performance.now();
+            logger.info('listing.started');
+            try {
+              const p = await this.parseProperty(url);
+              if (!p.title) throw new Error('parse title missing');
+              properties.push(p);
+              logger.info('listing.completed', {
+                listing: p,
+                duration_ms: Math.round(performance.now() - started),
+              });
+            } catch (e) {
+              logger.error('listing.failed', e, {
+                duration_ms: Math.round(performance.now() - started),
+              });
+              failed++;
+              error = sanitizeDiagnostic(e);
+            }
+          });
+          await delay(1200, { signal: this.signal });
         }
-        await delay(1200, { signal: this.signal });
+        return {
+          properties,
+          outcome: failed
+            ? (properties.length ? 'partial' : 'failed')
+            : 'succeeded',
+          error,
+        };
+      } catch (e) {
+        logger.error('provider.crawl_failed', e);
+        return {
+          properties,
+          outcome: properties.length ? 'partial' : 'failed',
+          error: sanitizeDiagnostic(e),
+        };
       }
-      return {
-        properties,
-        outcome: failed
-          ? (properties.length ? 'partial' : 'failed')
-          : 'succeeded',
-        error,
-      };
-    } catch (e) {
-      return {
-        properties,
-        outcome: properties.length ? 'partial' : 'failed',
-        error: sanitizeDiagnostic(e),
-      };
-    }
+    });
   }
 
   async verify(url: string): Promise<{ last_check_result: string }> {
@@ -110,6 +129,10 @@ export abstract class PropertyProvider {
           : 'unknown',
       };
     } catch (e) {
+      logger.error('listing.verification_failed', e, {
+        provider_name: this.name,
+        listing_url: url,
+      });
       return {
         last_check_result:
           e instanceof HttpError && [404, 410].includes(e.status)
@@ -156,31 +179,13 @@ export abstract class PropertyProvider {
    * Imprime informações sobre uma propriedade coletada
    */
   protected printProperty(property: ScrapedListing): void {
-    console.log(
-      `[${this.name}] ${property.title} - ${(property.price_cents == null
-        ? 'Sob consulta'
-        : property.price_cents / 100)}`,
-    );
-    console.log(`[${this.name}] ${property.url}\n`);
+    logger.info('listing.observed', {
+      provider_name: this.name,
+      listing: property,
+    });
   }
 
-  /**
-   * Tratamento de erros genérico
-   */
   protected handleError(error: unknown): void {
-    if (error instanceof Error && error.message.includes('403')) {
-      console.error(
-        `⚠️  AVISO: ${this.name} bloqueou o acesso (403 Forbidden).`,
-      );
-      console.error(
-        '   Isso é comum em ambientes de CI/CD como GitHub Actions.',
-      );
-      console.error('   O crawler continuará apenas com os outros sites.\n');
-    } else {
-      console.error(
-        `❌ Erro ao coletar imóveis do ${this.name}:`,
-        error,
-      );
-    }
+    logger.error('provider.failed', error, { provider_name: this.name });
   }
 }
