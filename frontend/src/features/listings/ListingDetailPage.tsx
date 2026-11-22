@@ -6,6 +6,7 @@ import { useListingDetail } from './listings.queries';
 import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { PageHeading } from '../../components/PageHeading';
+import { Icon } from '../../components/Icon';
 
 export function ListingDetailPage() {
   const { encodedLink = '' } = useParams();
@@ -26,55 +27,59 @@ export function ListingDetailPage() {
   const listing = detailQuery.data.listing;
   return (
     <>
-      <Link className='back' to='/imoveis'>← Voltar aos imóveis</Link>
+      <Link className='back text-action' to='/imoveis'>
+        <Icon name='back' /> Voltar aos imóveis
+      </Link>
       <PageHeading
         title={listing.title}
         description={listing.neighborhood || 'Não informado'}
         kicker={source(listing.source)}
       />
       <div className='detail-grid'>
-        <section className='panel'>
-          <PropertyPhoto url={listing.photo_url} />
-          <h2>{money(listing.price_cents)}</h2>
-          <dl>
-            {[
-              ['Área', listing.area_m2 ? `${listing.area_m2} m²` : null],
-              ['Quartos', listing.bedrooms],
-              ['Suítes', listing.suites],
-              [
-                'Elevador',
-                listing.has_elevator == null
-                  ? null
-                  : listing.has_elevator
-                  ? 'Sim'
-                  : 'Não',
-              ],
-              [
-                'Vaga',
-                listing.has_parking == null
-                  ? null
-                  : listing.has_parking
-                  ? 'Sim'
-                  : 'Não',
-              ],
-              ['Primeira coleta', date(listing.first_seen_at)],
-              ['Última coleta', date(listing.last_seen_at)],
-              ['Preço observado em', date(listing.price_observed_at)],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value ?? 'Não informado'}</dd>
-              </div>
-            ))}
-          </dl>
-          <a
-            className='button primary'
-            href={listing.url}
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            Abrir anúncio original
-          </a>
+        <section className='panel detail-property'>
+          <PropertyPhoto url={listing.photo_url} alt={listing.title} eager />
+          <div className='detail-property-body'>
+            <h2>{money(listing.price_cents)}</h2>
+            <dl>
+              {[
+                ['Área', listing.area_m2 ? `${listing.area_m2} m²` : null],
+                ['Quartos', listing.bedrooms],
+                ['Suítes', listing.suites],
+                [
+                  'Elevador',
+                  listing.has_elevator == null
+                    ? null
+                    : listing.has_elevator
+                    ? 'Sim'
+                    : 'Não',
+                ],
+                [
+                  'Vaga',
+                  listing.has_parking == null
+                    ? null
+                    : listing.has_parking
+                    ? 'Sim'
+                    : 'Não',
+                ],
+                ['Primeira coleta', date(listing.first_seen_at)],
+                ['Última coleta', date(listing.last_seen_at)],
+                ['Preço observado em', date(listing.price_observed_at)],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value ?? 'Não informado'}</dd>
+                </div>
+              ))}
+            </dl>
+            <a
+              className='button primary'
+              href={listing.url}
+              target='_blank'
+              rel='noopener noreferrer'
+            >
+              Abrir anúncio original <Icon name='external' />
+            </a>
+          </div>
         </section>
         <div className='detail-side'>
           <PropertyMarkForm

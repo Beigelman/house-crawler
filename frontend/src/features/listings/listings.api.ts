@@ -3,6 +3,8 @@ import { check } from '../../lib/query-result';
 import { toCentavos } from '../../../../shared/money.ts';
 import type { Listing } from '../../../../shared/property.ts';
 
+const PAGE_SIZE = 30;
+
 export async function browse(params: URLSearchParams) {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const marked = params.get('mark');
@@ -53,11 +55,17 @@ export async function browse(params: URLSearchParams) {
     ? q.order('discount_pct', { ascending: false, nullsFirst: false })
     : q.order('first_seen_at', { ascending: false });
   const r = await q.order('url', { ascending: true }).range(
-    (page - 1) * 30,
-    page * 30 - 1,
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE - 1,
   );
   check(r);
-  return { rows: r.data as unknown as Listing[], count: r.count ?? 0, page };
+  const count = r.count ?? 0;
+  return {
+    rows: r.data as unknown as Listing[],
+    count,
+    page,
+    totalPages: Math.ceil(count / PAGE_SIZE),
+  };
 }
 
 export async function getListingDetail(url: string) {

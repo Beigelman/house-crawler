@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Navigate, useSearchParams } from 'react-router-dom';
+import { Brand } from '../../components/Brand';
 import { sendLoginLink, signInWithPassword } from './auth.api';
 
 export function LoginPage(
@@ -19,23 +20,9 @@ export function LoginPage(
   if (session && !denied) return <Navigate to={target} replace />;
   return (
     <main className='login'>
-      <div className='login-story'>
-        <span className='eyebrow'>HOUSE CRAWLER</span>
-        <h1>
-          Um lugar para<br />encontrar o seu.
-        </h1>
-        <p>
-          Todos os anúncios. Suas escolhas.<br />Um olhar atento às
-          oportunidades.
-        </p>
-        <div className='house-art' aria-hidden='true'>⌂</div>
-        <small>SEU RADAR IMOBILIÁRIO · BRASÍLIA</small>
-      </div>
-      <section className='login-form'>
-        <div className='brand'>
-          ⌂ <b>Casa Radar</b>
-        </div>
-        <h2>Bem-vindo de volta</h2>
+      <section className='login-form' aria-labelledby='login-title'>
+        <Brand />
+        <h1 id='login-title'>Bem-vindo de volta</h1>
         <p>
           {usePassword
             ? 'Acesse seu painel com seu email e senha.'
@@ -117,6 +104,13 @@ export function LoginPage(
         )}
         <small>Acesso privado. Apenas o proprietário pode entrar.</small>
       </section>
+      <div className='login-story'>
+        <img src='/assets/brasilia-modernist.avif' alt='' fetchPriority='high' />
+        <div className='login-caption'>
+          <span>Brasília, DF</span>
+          <p>Um lugar para encontrar o seu.</p>
+        </div>
+      </div>
     </main>
   );
 }

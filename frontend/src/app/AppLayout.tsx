@@ -1,36 +1,38 @@
 import type { ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { Brand } from '../components/Brand';
+import { Icon } from '../components/Icon';
 import { CollectButton } from '../features/runs/CollectButton';
 import { signOut } from '../features/auth/auth.api';
+
+const navigation = [
+  ['/', 'Visão geral', 'dashboard'],
+  ['/imoveis', 'Imóveis', 'home'],
+  ['/buscas', 'Minhas buscas', 'search'],
+  ['/execucoes', 'Execuções', 'history'],
+] as const;
 
 export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className='shell'>
-      <aside>
-        <Link className='brand' to='/'>
-          ⌂ <b>Casa Radar</b>
+      <div className='sidebar'>
+        <Link className='brand-link' to='/'>
+          <Brand />
         </Link>
-        <span className='eyebrow'>SUA BUSCA, EM UM LUGAR</span>
-        <nav>
-          {[['/', 'Visão geral', '◫'], ['/imoveis', 'Imóveis', '⌂'], [
-            '/buscas',
-            'Minhas buscas',
-            '⌕',
-          ], ['/execucoes', 'Execuções', '↻']].map(([to, label, icon]) => (
+        <nav className='app-nav' aria-label='Navegação principal'>
+          {navigation.map(([to, label, icon]) => (
             <NavLink key={to} to={to} end={to === '/'}>
-              <span aria-hidden='true'>{icon}</span>
+              <Icon name={icon} />
               {label}
             </NavLink>
           ))}
         </nav>
-        <div className='sidebar-bottom'>
-          <span className='dot' /> Seu radar pessoal<br />
-          <small>Brasília · DF</small>
-        </div>
-      </aside>
+      </div>
       <div className='workspace'>
-        <header>
-          <span>SEU PRÓXIMO ENDEREÇO</span>
+        <header className='topbar'>
+          <span className='workspace-location'>
+            <Icon name='pin' /> Brasília, DF
+          </span>
           <div className='header-actions'>
             <CollectButton />
             <button
@@ -38,16 +40,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
               className='quiet'
               onClick={() => void signOut()}
             >
+              <Icon name='logout' />
               Sair
             </button>
           </div>
         </header>
-        <main>
-          {children}
-        </main>
-        <footer>
-          CASA RADAR <span>Feito para encontrar boas possibilidades.</span>
-        </footer>
+        <main>{children}</main>
       </div>
     </div>
   );

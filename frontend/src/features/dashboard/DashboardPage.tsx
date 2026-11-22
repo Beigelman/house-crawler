@@ -6,6 +6,9 @@ import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeading } from '../../components/PageHeading';
+import { Icon } from '../../components/Icon';
+
+const number = new Intl.NumberFormat('pt-BR');
 
 export function DashboardPage() {
   const dashboardQuery = useQuery({
@@ -17,67 +20,101 @@ export function DashboardPage() {
   if (dashboardQuery.isError) {
     return <ErrorState retry={() => void dashboardQuery.refetch()} />;
   }
-  const dashboardData = dashboardQuery.data;
-  const online = dashboardData.heartbeat &&
-    Date.now() - new Date(dashboardData.heartbeat).getTime() <= 120000;
+
+  const { active, recent, df, wi, run, heartbeat } = dashboardQuery.data;
+  const online = heartbeat &&
+    Date.now() - new Date(heartbeat).getTime() <= 120000;
+  const sources = [['DF Imóveis', df], ['Wimoveis', wi]] as const;
+  const sourceTotal = df + wi;
+
   return (
     <>
       <PageHeading
-        title='Um novo olhar para sua busca.'
-        description='Acompanhe o que chegou. Guarde o que faz sentido.'
+        title='Visão geral'
+        description='Acompanhe seus anúncios e as últimas coletas.'
       />
+      <section
+        className='dashboard-hero'
+        aria-labelledby='dashboard-hero-title'
+      >
+        <div className='hero-content'>
+          <h2 id='dashboard-hero-title'>Encontre seu próximo endereço.</h2>
+          <p>Explore os anúncios de Brasília reunidos pelo seu radar.</p>
+          <Link className='button' to='/imoveis'>
+            Explorar imóveis <Icon name='arrow' />
+          </Link>
+        </div>
+        <img src='/assets/brasilia-modernist.avif' alt='' fetchPriority='high' />
+      </section>
       <div className='stats'>
-        <article>
-          <span>Imóveis ativos</span>
-          <strong>{dashboardData.active}</strong>
-          <small>Na sua coleção</small>
+        <article className='panel'>
+          <span className='icon-tile'>
+            <Icon name='home' />
+          </span>
+          <div>
+            <span>Imóveis ativos</span>
+            <strong>{number.format(active)}</strong>
+          </div>
         </article>
-        <article>
-          <span>Novos em 7 dias</span>
-          <strong>{dashboardData.recent}</strong>
-          <small>Possibilidades para explorar</small>
+        <article className='panel'>
+          <span className='icon-tile'>
+            <Icon name='spark' />
+          </span>
+          <div>
+            <span>Novos em 7 dias</span>
+            <strong>{number.format(recent)}</strong>
+          </div>
         </article>
-        <article>
-          <span>Seu coletor</span>
-          <strong className='status-text'>
-            {online ? 'Online' : 'Offline'}
-          </strong>
-          <small>
-            {dashboardData.heartbeat
-              ? 'Visto em ' + date(dashboardData.heartbeat)
-              : 'Nunca conectado'}
-          </small>
+        <article className='panel'>
+          <span className='icon-tile'>
+            <Icon name='pulse' />
+          </span>
+          <div>
+            <span>Coletor</span>
+            <strong className='status-text' data-online={Boolean(online)}>
+              {online ? 'Online' : 'Offline'}
+            </strong>
+            <small>
+              {heartbeat ? 'Visto em ' + date(heartbeat) : 'Nunca conectado'}
+            </small>
+          </div>
         </article>
       </div>
       <div className='dashboard-grid'>
-        <section className='panel welcome'>
-          <span className='eyebrow'>PRÓXIMO PASSO</span>
-          <h2>
-            Seu próximo endereço<br />pode estar aqui.
-          </h2>
-          <p>Compare os anúncios e mantenha suas escolhas por perto.</p>
-          <Link className='button primary' to='/imoveis'>
-            Explorar imóveis →
+        <section className='panel'>
+          <h2>Anúncios por fonte</h2>
+          {sources.map(([label, count]) => (
+            <div className='source-breakdown' key={label}>
+              <div className='source-row'>
+                <span>{label}</span>
+                <b>{number.format(count)}</b>
+              </div>
+              <div className='source-track' aria-hidden='true'>
+                <span
+                  style={{
+                    width: sourceTotal ? `${count / sourceTotal * 100}%` : '0%',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </section>
+        <section className='panel last-run'>
+          <h2>Última execução</h2>
+          {run
+            ? (
+              <>
+                <strong>{run.state}</strong>
+                <p>{date(run.started_at)}</p>
+              </>
+            )
+            : <p>Sem execuções</p>}
+          <Link className='text-action' to='/execucoes'>
+            Ver histórico <Icon name='arrow' />
           </Link>
         </section>
-        <section className='panel'>
-          <h2>De onde vêm os anúncios</h2>
-          <div className='source-row'>
-            <span>DF Imóveis</span>
-            <b>{dashboardData.df}</b>
-          </div>
-          <div className='source-row'>
-            <span>Wimoveis</span>
-            <b>{dashboardData.wi}</b>
-          </div>
-          <h3>Última execução</h3>
-          <p>{dashboardData.run ? dashboardData.run.state : 'Sem execuções'}</p>
-          <Link to='/execucoes'>Ver histórico →</Link>
-        </section>
       </div>
-      {dashboardData.active === 0 && (
-        <EmptyState>Nenhum imóvel coletado</EmptyState>
-      )}
+      {active === 0 && <EmptyState>Nenhum imóvel coletado</EmptyState>}
     </>
   );
 }

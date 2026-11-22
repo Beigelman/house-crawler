@@ -6,6 +6,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeading } from '../../components/PageHeading';
+import { Icon } from '../../components/Icon';
 
 export function RunsPage() {
   const runsQuery = useQuery({
@@ -21,11 +22,19 @@ export function RunsPage() {
   return (
     <>
       <PageHeading
-        title='Seu radar, em movimento.'
-        description='Cada coleta tem uma história. Acompanhe por aqui.'
+        title='Execuções'
+        description='Acompanhe as coletas, as validações e os resultados de cada fonte.'
       />
       {runsQuery.data.activeJobs.map((r) => (
-        <p className='panel' key={r.id}>Solicitação {r.id} · {r.state}</p>
+        <div className='panel active-run' key={r.id}>
+          <span className='icon-tile'>
+            <Icon name='pulse' />
+          </span>
+          <span>
+            Solicitação <small>{r.id}</small>
+          </span>
+          <span className='badge' data-status={r.state}>{r.state}</span>
+        </div>
       ))}
       {!runsQuery.data.jobs.length
         ? <EmptyState>Sem execuções</EmptyState>
@@ -40,9 +49,17 @@ export function RunsPage() {
                     setSelected(selected === r.id ? null : r.id)}
                   aria-expanded={selected === r.id}
                 >
-                  <span>{date(r.started_at)}</span>
-                  <b>{r.state}</b>
-                  <span>{r.kind === 'validate' ? 'Validação' : 'Coleta'}</span>
+                  <span className='icon-tile'>
+                    <Icon name='history' />
+                  </span>
+                  <span className='run-title'>
+                    <strong>
+                      {r.kind === 'validate' ? 'Validação' : 'Coleta'}
+                    </strong>
+                    <span>{date(r.started_at)}</span>
+                  </span>
+                  <b className='badge' data-status={r.state}>{r.state}</b>
+                  <Icon name='chevron' />
                 </button>
                 <small>{r.id}</small>
                 <p>Fim: {date(r.finished_at)} · Email: {r.email_state}</p>

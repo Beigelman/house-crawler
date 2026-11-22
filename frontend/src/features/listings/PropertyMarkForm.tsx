@@ -18,7 +18,7 @@ export function PropertyMarkForm(
   }, [value]);
   return (
     <section className='panel'>
-      <h2>Seu olhar sobre o imóvel</h2>
+      <h2>Minha seleção</h2>
       <label>
         Status do imóvel<select
           value={status}
@@ -38,27 +38,30 @@ export function PropertyMarkForm(
           onChange={(e) => setNote(e.target.value)}
         />
       </label>
-      <small>{note.length}/2000</small>
-      <button
-        type='button'
-        disabled={pending}
-        onClick={async () => {
-          setPending(true);
-          try {
-            await savePropertyMark(listingId, status, note);
-            setMessage('Anotação salva');
-            onSave();
-          } catch {
-            setStatus(value?.status || '');
-            setNote(value?.note || '');
-            setMessage('Não foi possível salvar a anotação.');
-          } finally {
-            setPending(false);
-          }
-        }}
-      >
-        Salvar anotação
-      </button>
+      <div className='mark-actions'>
+        <button
+          type='button'
+          className='primary'
+          disabled={pending}
+          onClick={async () => {
+            setPending(true);
+            try {
+              await savePropertyMark(listingId, status, note);
+              setMessage('Anotação salva');
+              onSave();
+            } catch {
+              setStatus(value?.status || '');
+              setNote(value?.note || '');
+              setMessage('Não foi possível salvar a anotação.');
+            } finally {
+              setPending(false);
+            }
+          }}
+        >
+          Salvar anotação
+        </button>
+        <small>{note.length}/2000</small>
+      </div>
       {message && (
         <p role={message === 'Anotação salva' ? 'status' : 'alert'}>
           {message}

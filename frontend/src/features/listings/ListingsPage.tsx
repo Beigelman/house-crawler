@@ -12,6 +12,13 @@ export function ListingsPage() {
   const listingsQuery = useListings(params);
   let content;
 
+  function goToPage(target: number) {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set('page', String(target));
+    setParams(nextParams);
+    globalThis.scrollTo(0, 0);
+  }
+
   if (listingsQuery.isPending) {
     content = <LoadingState />;
   } else if (listingsQuery.isError) {
@@ -19,41 +26,80 @@ export function ListingsPage() {
   } else if (!listingsQuery.data.rows.length) {
     content = <EmptyState>Nenhum imóvel encontrado</EmptyState>;
   } else {
+    const { rows, count, page, totalPages } = listingsQuery.data;
+    const visiblePageCount = Math.min(6, totalPages);
+    const firstVisiblePage = Math.min(page, totalPages - visiblePageCount + 1);
+    const visiblePages = Array.from(
+      { length: visiblePageCount },
+      (_, index) => firstVisiblePage + index,
+    );
+
     content = (
       <>
         <div className='results-line'>
-          <b>{listingsQuery.data.count} possibilidades</b>
-          <span>Uma escolha de cada vez.</span>
+          <h2>
+            {count.toLocaleString('pt-BR')}{' '}
+            {count === 1 ? 'imóvel encontrado' : 'imóveis encontrados'}
+          </h2>
         </div>
         <div className='listing-grid'>
-          {listingsQuery.data.rows.map((listing) => (
+          {rows.map((listing) => (
             <ListingCard key={listing.url} listing={listing} />
           ))}
         </div>
-        <div className='pagination'>
-          <button
-            type='button'
-            disabled={listingsQuery.data.page === 1}
-            onClick={() => {
-              params.set('page', String(listingsQuery.data.page - 1));
-              setParams(params);
-            }}
-          >
-            Anterior
-          </button>
-          <span>Página {listingsQuery.data.page}</span>
-          <button
-            type='button'
-            disabled={listingsQuery.data.page * 30 >=
-              listingsQuery.data.count}
-            onClick={() => {
-              params.set('page', String(listingsQuery.data.page + 1));
-              setParams(params);
-            }}
-          >
-            Próxima
-          </button>
-        </div>
+        <nav className='pagination' aria-label='Paginação de imóveis'>
+          <p>Página {page} de {totalPages}</p>
+          {totalPages > 1 && (
+            <div className='pagination-controls'>
+              <div className='pagination-group'>
+                <button
+                  type='button'
+                  disabled={page === 1}
+                  onClick={() => goToPage(1)}
+                >
+                  Primeira
+                </button>
+                <button
+                  type='button'
+                  disabled={page === 1}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  Anterior
+                </button>
+              </div>
+              <div className='pagination-group pagination-pages'>
+                {visiblePages.map((number) => (
+                  <button
+                    key={number}
+                    type='button'
+                    aria-label={`Página ${number}`}
+                    aria-current={number === page ? 'page' : undefined}
+                    disabled={number === page}
+                    onClick={() => goToPage(number)}
+                  >
+                    {number}
+                  </button>
+                ))}
+              </div>
+              <div className='pagination-group'>
+                <button
+                  type='button'
+                  disabled={page === totalPages}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  Próxima
+                </button>
+                <button
+                  type='button'
+                  disabled={page === totalPages}
+                  onClick={() => goToPage(totalPages)}
+                >
+                  Última
+                </button>
+              </div>
+            </div>
+          )}
+        </nav>
       </>
     );
   }
@@ -61,8 +107,8 @@ export function ListingsPage() {
   return (
     <>
       <PageHeading
-        title='Imóveis, no seu ritmo.'
-        description='Filtre, compare e encontre o que combina com você.'
+        title='Explorar imóveis'
+        description='Filtre os anúncios de Brasília e compare os imóveis da sua seleção.'
       />
       <ListingFilters />
       {content}

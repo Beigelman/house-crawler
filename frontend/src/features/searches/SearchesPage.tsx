@@ -7,6 +7,7 @@ import { LoadingState } from '../../components/LoadingState';
 import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeading } from '../../components/PageHeading';
+import { Icon } from '../../components/Icon';
 
 export function SearchesPage() {
   const profilesQuery = useQuery({ queryKey: ['searches'], queryFn: searches });
@@ -18,33 +19,35 @@ export function SearchesPage() {
   return (
     <>
       <PageHeading
-        title='Buscas que combinam com você.'
-        description='Defina o que importa. Seu radar cuida do resto.'
+        title='Minhas buscas'
+        description='Defina os bairros, a faixa de preço e os critérios de cada coleta.'
+        action={
+          <button
+            type='button'
+            className='primary'
+            onClick={() =>
+              setDraft({
+                id: crypto.randomUUID(),
+                name: 'Nova busca',
+                enabled: true,
+                providers: ['wimoveis', 'dfimoveis'],
+                params: {
+                  neighborhoods: ['asa-norte'],
+                  numberOfRooms: [3],
+                  numberOfSuites: 0,
+                  minArea: 90,
+                  maxArea: 150,
+                  minPrice: 1000000,
+                  maxPrice: 1400000,
+                  hasElevator: false,
+                  hasParking: false,
+                },
+              })}
+          >
+            <Icon name='plus' /> Nova busca
+          </button>
+        }
       />
-      <button
-        type='button'
-        className='primary'
-        onClick={() =>
-          setDraft({
-            id: crypto.randomUUID(),
-            name: 'Nova busca',
-            enabled: true,
-            providers: ['wimoveis', 'dfimoveis'],
-            params: {
-              neighborhoods: ['asa-norte'],
-              numberOfRooms: [3],
-              numberOfSuites: 0,
-              minArea: 90,
-              maxArea: 150,
-              minPrice: 1000000,
-              maxPrice: 1400000,
-              hasElevator: false,
-              hasParking: false,
-            },
-          })}
-      >
-        ＋ Nova busca
-      </button>
       {!profilesQuery.data.length && !draft && (
         <EmptyState>Nenhuma busca salva</EmptyState>
       )}

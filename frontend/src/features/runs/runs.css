@@ -1,44 +1,97 @@
-.collect {
-  position: relative;
-}
+.collect { position: relative; }
 
 .collect > span {
   position: absolute;
+  z-index: 2;
+  top: calc(100% + 6px);
   right: 0;
-  top: 100%;
-  background: #fff;
+  width: 235px;
   padding: 12px;
-  box-shadow: 0 3px 15px #0002;
-  z-index: 4;
-  max-width: 270px;
-  width: 230px;
-  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  font-size: 0.86rem;
+}
+
+.collect > span a {
+  display: block;
+  margin-top: 5px;
+  font-weight: 650;
 }
 
 .runs {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .run-heading {
   display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
   width: 100%;
-  border: 0;
-  background: #f4f7f0;
   margin-bottom: 10px;
-  font-size: 13px;
+  border-color: var(--line);
+  background: var(--surface-soft);
+  padding: 9px;
+  text-align: left;
 }
 
-.runs small {
-  overflow-wrap: anywhere;
+.run-title {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  color: var(--ink);
 }
 
-pre {
+.run-title > span { color: var(--muted); font-weight: 500; }
+.run-heading[aria-expanded='true'] > .icon { transform: rotate(180deg); }
+
+.runs small,
+.active-run small { overflow-wrap: anywhere; }
+
+.runs .source-row { color: var(--muted); }
+
+.active-run {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.active-run .badge { margin-left: auto; }
+
+.runs .badge[data-status='succeeded'] {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.runs .badge[data-status='partial'] {
+  background: #f5eddc;
+  color: #705621;
+}
+
+.runs .badge[data-status='failed'] {
+  background: #f7ebe5;
+  color: #833d2a;
+}
+
+.runs pre {
   max-width: 100%;
+  margin: 12px 0 0;
+  padding: 13px;
   overflow: auto;
-  background: #f5f6f2;
-  padding: 15px;
-  font-size: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  font-size: 0.83rem;
+}
+
+@media (max-width: 760px) {
+  .collect > span { right: -40px; }
+}
+
+@media (max-width: 400px) {
+  .run-heading { gap: 6px; }
+  .run-heading .icon-tile { display: none; }
 }

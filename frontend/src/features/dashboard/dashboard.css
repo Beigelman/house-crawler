@@ -1,86 +1,153 @@
-.stats {
+.dashboard-hero {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin: 28px 0;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1fr);
+  min-height: 315px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--green-dark);
+  color: white;
 }
+
+.hero-content {
+  align-self: center;
+  padding: clamp(26px, 3.4vw, 54px);
+}
+
+.hero-content h2 {
+  max-width: 11ch;
+  font: 400 clamp(2.3rem, 4vw, 4.15rem) / 1.02 var(--display);
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.hero-content p {
+  max-width: 30ch;
+  margin-top: 16px;
+  color: #e0e8db;
+}
+
+.hero-content .button {
+  margin-top: 23px;
+  border-color: var(--lime);
+  background: var(--lime);
+  color: var(--green-dark);
+}
+
+.hero-content .button:hover {
+  border-color: white;
+  background: white;
+}
+
+.hero-content .button:focus-visible { outline-color: var(--lime); }
+
+.dashboard-hero img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  object-position: 57% 56%;
+}
+
+.stats,
+.dashboard-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .stats article {
-  background: #fff;
-  border: 1px solid #e0e6dc;
-  border-radius: 12px;
-  padding: 22px 25px;
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
 }
 
-.stats article > span {
-  font-size: 12px;
-  color: #738074;
+.stats article div > span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 650;
 }
 
 .stats strong {
   display: block;
-  font-size: 40px;
-  letter-spacing: -1.5px;
-  line-height: 1.4;
-  font-weight: 600;
+  margin-top: 4px;
+  font-size: clamp(1.55rem, 2.55vw, 2.5rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.12;
+  letter-spacing: -0.055em;
 }
 
-.stats strong.status-text {
-  font-size: 29px;
-  line-height: 1.9;
-  letter-spacing: -0.7px;
+.stats small { display: block; margin-top: 5px; }
+
+.stats .status-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: clamp(1.25rem, 2.1vw, 1.85rem);
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 20px;
+.status-text::before {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: #a66b39;
+  content: '';
 }
 
-.welcome {
-  background: #e5eddf;
-  padding: 30px;
+.status-text[data-online='true']::before { background: #3c865f; }
+
+.dashboard-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+
+.source-breakdown .source-row {
+  padding-bottom: 6px;
+  border: 0;
 }
 
-.welcome h2 {
-  font-size: 28px;
-  margin: 18px 0;
-  letter-spacing: -0.6px;
+.source-track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--green-soft);
 }
 
-.welcome p {
-  max-width: 300px;
+.source-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
 }
 
-.welcome .button {
-  margin-top: 18px;
+.source-breakdown + .source-breakdown .source-track span { background: #759458; }
+
+.last-run {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.last-run p { margin-top: 0; }
+
+.last-run .text-action { margin-top: auto; }
+
+@media (max-width: 1000px) {
+  .stats article { flex-direction: column; gap: 8px; }
 }
 
 @media (max-width: 760px) {
-  .welcome {
-    padding: 20px;
-  }
-
-  .stats {
-    gap: 8px;
-  }
-  .stats article {
-    padding: 13px 10px;
-  }
-  .stats article > span {
-    font-size: 10px;
-  }
-  .stats strong {
-    font-size: 30px;
-  }
-  .stats strong.status-text {
-    font-size: 20px;
-    line-height: 2.1;
-  }
-  .stats small {
-    font-size: 9px;
-  }
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+  .dashboard-hero { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-hero img { height: clamp(160px, 44vw, 260px); }
+  .hero-content h2 { max-width: 14ch; }
+  .hero-content p { margin-top: 10px; }
+  .hero-content .button { margin-top: 16px; }
+  .stats { gap: 8px; }
+  .stats article { padding: 12px 9px; }
+  .stats .icon-tile { width: 31px; height: 31px; font-size: 0.9rem; }
+  .stats article div > span,
+  .stats small { font-size: 0.75rem; }
+  .stats strong { overflow-wrap: anywhere; }
+  .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .last-run .text-action { margin-top: 8px; }
 }

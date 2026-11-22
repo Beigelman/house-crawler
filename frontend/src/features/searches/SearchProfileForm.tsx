@@ -44,6 +44,15 @@ export function SearchProfileForm(
         }
       }}
     >
+      <div className='profile-heading'>
+        <h2>{initial.name}</h2>
+        <span
+          className='badge'
+          data-status={profile.enabled ? 'active' : undefined}
+        >
+          {profile.enabled ? 'Ativa' : 'Inativa'}
+        </span>
+      </div>
       <div className='form-grid'>
         <label>
           Nome da busca<input
@@ -131,14 +140,16 @@ export function SearchProfileForm(
           />Busca ativa
         </label>
       </div>
-      <button type='submit' disabled={pending}>
-        {pending ? 'Salvando…' : 'Salvar busca'}
-      </button>
-      {message && (
-        <span role={message === 'Busca salva' ? 'status' : 'alert'}>
-          {message}
-        </span>
-      )}
+      <div className='profile-actions'>
+        <button type='submit' className='primary' disabled={pending}>
+          {pending ? 'Salvando…' : 'Salvar busca'}
+        </button>
+        {message && (
+          <span role={message === 'Busca salva' ? 'status' : 'alert'}>
+            {message}
+          </span>
+        )}
+      </div>
     </form>
   );
 }

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { enqueueCollection } from './runs.api';
+import { Icon } from '../../components/Icon';
 
 export function CollectButton() {
   const [message, setMessage] = useState('');
@@ -12,6 +13,7 @@ export function CollectButton() {
     <div className='collect'>
       <button
         type='button'
+        className='primary'
         disabled={pending}
         onClick={async () => {
           setPending(true);
@@ -39,7 +41,7 @@ export function CollectButton() {
           }
         }}
       >
-        {pending ? 'Solicitando…' : '↻ Coletar agora'}
+        <Icon name='refresh' /> {pending ? 'Solicitando…' : 'Coletar agora'}
       </button>
       {message && (
         <span role='status'>

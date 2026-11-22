@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Listing } from '../../../../shared/property.ts';
 import { money, source } from '../../lib/formatters';
 import { PropertyPhoto } from './PropertyPhoto';
+import { Icon } from '../../components/Icon';
 
 export function ListingCard({ listing }: { listing: Listing }) {
   return (
@@ -11,7 +12,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <div className='listing-body'>
           <div className='card-top'>
             <small>{source(listing.source)}</small>
-            <span className='badge'>
+            <span className='badge' data-status={listing.availability}>
               {listing.availability === 'active'
                 ? 'Ativo'
                 : listing.availability === 'removed'
@@ -21,13 +22,22 @@ export function ListingCard({ listing }: { listing: Listing }) {
           </div>
           <h2>{money(listing.price_cents)}</h2>
           <h3>{listing.title}</h3>
-          <p>{listing.neighborhood || 'Não informado'}</p>
+          <p className='listing-location'>
+            <Icon name='pin' /> {listing.neighborhood || 'Não informado'}
+          </p>
           <div className='listing-meta'>
-            <span>{listing.area_m2 ?? '—'} m²</span>
-            <span>{listing.bedrooms ?? '—'} quartos</span>
+            <span>
+              <Icon name='area' /> {listing.area_m2 ?? '—'} m²
+            </span>
+            <span>
+              <Icon name='bed' /> {listing.bedrooms ?? '—'} quartos
+            </span>
           </div>
           {listing.discount_pct != null && (
-            <small className='deal'>
+            <small
+              className='deal'
+              data-below={Number(listing.discount_pct) >= 0}
+            >
               {Math.abs(Number(listing.discount_pct)).toFixed(1)}%{' '}
               {Number(listing.discount_pct) >= 0 ? 'abaixo' : 'acima'}{' '}
               da mediana coletada
