@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=@RUN_USER@
-WorkingDirectory="@BACKEND_DIR@"
+WorkingDirectory=@WORKING_DIR@
 Environment="DENO_BIN=@DENO_BIN@"
 ExecStart=/bin/bash "@EXEC_BACKEND_DIR@/scripts/run-house-validator.sh"
 StandardOutput=journal

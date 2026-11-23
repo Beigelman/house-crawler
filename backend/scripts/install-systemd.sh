@@ -38,19 +38,26 @@ escape_setting() {
     printf '%s' "$value"
 }
 
-BACKEND_DIR="$(escape_setting "$BACKEND_DIR")"
+# WorkingDirectory takes the full path literally except for systemd specifiers.
+WORKING_DIR="${BACKEND_DIR//%/%%}"
+EXEC_BACKEND_DIR="$(escape_setting "$BACKEND_DIR")"
+EXEC_BACKEND_DIR="${EXEC_BACKEND_DIR//\$/\$\$}"
 DENO_BIN="$(escape_setting "$DENO_BIN")"
-EXEC_BACKEND_DIR="${BACKEND_DIR//\$/\$\$}"
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 for unit in house-worker.service house-validator.service; do
     template="$(cat "$SCRIPT_DIR/$unit")"
-    template="${template//@RUN_USER@/$RUN_USER}"
-    template="${template//@EXEC_BACKEND_DIR@/$EXEC_BACKEND_DIR}"
-    template="${template//@BACKEND_DIR@/$BACKEND_DIR}"
-    template="${template//@DENO_BIN@/$DENO_BIN}"
+    template="${template//@RUN_USER@/"$RUN_USER"}"
+    template="${template//@EXEC_BACKEND_DIR@/"$EXEC_BACKEND_DIR"}"
+    template="${template//@WORKING_DIR@/"$WORKING_DIR"}"
+    template="${template//@DENO_BIN@/"$DENO_BIN"}"
     printf '%s\n' "$template" > "$TEMP_DIR/$unit"
 done
+cp "$SCRIPT_DIR/house-validator.timer" "$TEMP_DIR/house-validator.timer"
+if command -v systemd-analyze >/dev/null; then
+    systemd-analyze verify "$TEMP_DIR/house-worker.service" \
+        "$TEMP_DIR/house-validator.service" "$TEMP_DIR/house-validator.timer"
+fi
 
 sudo -v
 # The worker owns collection scheduling; retire the old collection timer.
@@ -59,7 +66,7 @@ if sudo systemctl cat house-crawler.timer >/dev/null 2>&1; then
 fi
 sudo install -m 644 "$TEMP_DIR/house-worker.service" /etc/systemd/system/
 sudo install -m 644 "$TEMP_DIR/house-validator.service" /etc/systemd/system/
-sudo install -m 644 "$SCRIPT_DIR/house-validator.timer" /etc/systemd/system/
+sudo install -m 644 "$TEMP_DIR/house-validator.timer" /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable house-validator.timer house-worker.service
 sudo systemctl start house-validator.timer
