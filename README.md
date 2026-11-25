@@ -66,7 +66,7 @@ A credencial `SUPABASE_SECRET_KEY` (`sb_secret_...`) pertence exclusivamente ao 
 Use a chave **Secret** de `rtk supabase status --workdir backend` no ambiente local
 ou de **Settings > API Keys** no projeto hospedado. Não use a chave publishable
 nem a chave JWT legada `service_role`.
-Configure `RESEND_API_KEY` e `FROM_EMAIL` para o envio. Em **Minhas buscas**,
+Configure `RESEND_API_KEY` e `FROM_EMAIL` para o envio. Em **Buscas salvas**,
 preencha **Email para novidades** em cada busca que deve enviar notificações.
 Separe os endereços por vírgula para enviar a mais de um destinatário.
 Ao atualizar uma instalação que ainda usa `TO_EMAILS`, aplique a migration de

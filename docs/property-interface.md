@@ -1,6 +1,6 @@
 # Casa Radar: operação da interface de imóveis
 
-A interface React lê o Supabase com sessão do proprietário. O coletor Deno continua no host atual; requisições do navegador ficam na fila até o worker local executá-las. Nenhum servidor de scraping é executado no frontend.
+A interface React usa a sessão de uma conta do Supabase Auth. O coletor Deno continua no host atual; requisições do navegador ficam na fila até o worker local executá-las. Nenhum servidor de scraping é executado no frontend.
 
 ## Desenvolvimento e provas locais
 
@@ -20,7 +20,15 @@ Os testes incluem callbacks reais do Auth local e processos CLI com `--preload` 
 
 Execute as provas Deno e Playwright **sequencialmente**: compartilham os mesmos dados locais. Não carregue `backend/.env` de produção nas provas. `supabase start` aplica a migração em um banco novo; para um banco local já iniciado, recrie somente esse ambiente descartável com `rtk supabase db reset --local --no-seed --workdir backend`.
 
-Para desenvolvimento manual, copie `frontend/.env.example` para `frontend/.env.local` e preencha a URL/chave pública do projeto de desenvolvimento. `pnpm --dir frontend run dev` abre a interface em localhost. Ela não contém credenciais de worker. Crie um usuário no Auth do ambiente de desenvolvimento e configure seu UUID como proprietário conforme abaixo; não use a identidade de teste em produção.
+Para desenvolvimento manual, copie `frontend/.env.example` para `frontend/.env.local` e preencha a URL/chave pública do projeto de desenvolvimento. `pnpm --dir frontend run dev` abre a interface em localhost. Ela não contém credenciais de worker. Crie uma conta em **Authentication → Users** no Supabase Studio local.
+
+## Contas do Supabase
+
+No projeto hospedado, desative **Allow new users to sign up** e **Allow anonymous sign-ins** nas configurações de Authentication. Em uma instância local já em execução, use `rtk supabase stop --workdir backend` e `rtk supabase start --workdir backend` para carregar as opções de Auth do `config.toml`. [Configuração de Auth](https://supabase.com/docs/guides/auth/general-configuration)
+
+Para conceder acesso, abra **Authentication → Users → Add user** no Dashboard do Supabase. Cada conta existente pode entrar com link por email ou com email e senha. [Gerenciamento de usuários](https://supabase.com/docs/guides/auth/users)
+
+Em um projeto que já usa a baseline, ajuste as opções de Authentication antes de aplicar a migração `authenticated_app_access` e publicar o frontend atualizado. A migração preserva as contas e os dados da aplicação.
 
 ## Instalação em um banco novo
 
@@ -30,19 +38,10 @@ Esta baseline exige um banco de aplicação vazio. Ela substitui o histórico an
 2. Em um projeto novo ou previamente limpo pelo administrador, aplique a baseline em `backend/supabase/migrations/` com a CLI. Confira o projeto alvo antes de qualquer comando remoto.
 3. Configure `SUPABASE_SECRET_KEY` exclusivamente no ambiente do worker, junto da URL do novo projeto. Nunca coloque essa credencial em `VITE_*`.
 4. No ambiente local descartável, reinstale com `rtk supabase db reset --local --no-seed --workdir backend`. Esse comando apaga os dados locais e aplica a baseline.
-5. Provisione a conta do proprietário no Supabase Auth (Dashboard ou administração confiável), desative novos cadastros no projeto se ele for dedicado, e execute em uma sessão administrativa:
-
-```sql
-insert into private.app_owner(singleton,user_id)
-values(true,'UUID-DO-USUARIO-AUTH')
-on conflict(singleton) do update set user_id=excluded.user_id;
-```
-
-Somente esse UUID recebe acesso. Não use `user_metadata` editável para autorização. Um usuário autenticado diferente não pode ler nem escrever imóveis, buscas, execuções ou solicitações.
-
+5. Aplique as configurações descritas em [Contas do Supabase](#contas-do-supabase) e crie as contas no Dashboard.
 6. Confira grants e RLS para as seis tabelas públicas e a view `listing_comparisons`; rode os advisors do Supabase. Os RPCs de worker só têm EXECUTE para `service_role`; o enqueue confere a identidade dentro do banco, com search path fixo. Não habilite acesso anônimo para resolver erros.
 7. Configure URL do site e redirect allowlist do Auth para `https://SEU-DOMINIO/login` (e localhost apenas no projeto de desenvolvimento).
-   O proprietário pode entrar com um link por email ou com email e senha. Os dois métodos restauram o caminho privado solicitado.
+   Os dois métodos de login restauram o caminho privado solicitado.
    Para ativar a opção de senha em uma conta existente, defina a senha no mesmo usuário do Supabase Auth em um ambiente administrativo confiável. [API administrativa para definir a senha](https://supabase.com/docs/reference/javascript/auth-admin-updateuserbyid)
 8. Defina **somente** `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` no build estático. Rode `pnpm --dir frontend install --frozen-lockfile` e `pnpm --dir frontend run build`. Publique `frontend/dist`; `_redirects` e `vercel.json` fornecem exemplos de fallback SPA. Abrir diretamente `/imoveis`, `/buscas` ou `/execucoes` deve retornar o shell com HTTP 200.
 9. Instale o worker e o timer de validação conforme [o guia Linux](../backend/scripts/SYSTEMD-SETUP.md) no host onde os portais funcionam. `deno task --config backend/deno.json run` e `deno task --config backend/deno.json validate` continuam disponíveis; todos usam o mesmo lease. O antigo timer de coleta deve ficar desabilitado, pois o worker agenda as coletas.
@@ -57,7 +56,7 @@ A baseline já inclui o agendamento. O worker agenda coletas diariamente às **0
 
 Em cada ciclo, o worker chama `enqueue_scheduled_crawl` com sua credencial de servidor. A função coloca uma solicitação na mesma fila de “Coletar agora”, com o horário e todas as buscas habilitadas. Depois, `claim_crawl_job` assume o mesmo job e registra seus resultados. O frontend pode ficar fechado.
 
-O agendamento começa após aplicar a migração e reiniciar `deno task --config backend/deno.json worker`. Ao iniciar ou retornar de um período offline, o worker faz uma única coleta de recuperação para o horário agendado mais recente, inclusive se esse horário foi no dia anterior. Não acumula todas as coletas perdidas. A chave persistida impede repetir o mesmo horário após reinícios ou com múltiplos workers. Uma fila ocupada adia a nova solicitação até haver espaço; sem proprietário ou buscas habilitadas, nada é criado. Uma falha no agendamento não impede o processamento de solicitações manuais.
+O agendamento começa após aplicar a migração e reiniciar `deno task --config backend/deno.json worker`. Ao iniciar ou retornar de um período offline, o worker faz uma única coleta de recuperação para o horário agendado mais recente, inclusive se esse horário foi no dia anterior. Não acumula todas as coletas perdidas. A chave persistida impede repetir o mesmo horário após reinícios ou com múltiplos workers. Uma fila ocupada adia a nova solicitação até haver espaço. A coleta agendada exige pelo menos uma busca habilitada. Uma falha no agendamento não impede o processamento de solicitações manuais.
 
 O worker precisa estar em execução e o computador acordado para iniciar coletas. Ele verifica o agendamento ao iniciar e 1 hora após terminar cada ciclo; pedidos manuais e horários agendados podem esperar até 1 hora pela próxima consulta, além do tempo de uma coleta em andamento. Não mantenha os antigos timers de coleta do sistema ativos junto desse agendamento, pois eles criam execuções independentes. A validação continua sendo um comando/timer separado.
 
@@ -69,11 +68,11 @@ Saídas: 0 para execução concluída, 1 para parcial/falha, 2 para coletor ocup
 
 ## Smoke test de go-live
 
-- Faça login como proprietário; abra listagem/detalhe, grave nota/favorito e recarregue.
-- Abra uma rota privada sem sessão e consulte o Data API com outra identidade: nenhum dado privado deve aparecer.
+- Faça login com duas contas criadas no Dashboard. Abra a mesma listagem nas duas sessões e confirme que uma nota ou favorito salvo em uma conta aparece somente nela.
+- Abra uma rota privada sem sessão e confirme o redirecionamento para login. Consulte o Data API sem sessão e confirme a recusa de acesso.
 - Edite uma busca, solicite uma coleta e feche o navegador. Verifique queued/running e o resultado em Execuções após reabrir.
 - Confirme no host que ambos os portais são acessíveis. Um 403 aparece como falha da fonte; não exclui histórico. Acesso em nuvem não foi presumido nem testado.
-- Confira os novos anúncios e o resultado separado do email. Preencha **Email para novidades** em **Minhas buscas** para receber os novos imóveis que correspondem a cada busca. Separe os endereços por vírgula. Buscas com o campo vazio continuam coletando imóveis. O worker combina os resultados das buscas com o mesmo endereço em um email por coleta. Uma falha de envio fica registrada e o worker ainda tenta entregar os emails dos outros destinatários.
+- Confira os novos anúncios e o resultado separado do email. Preencha **Email para novidades** em **Buscas salvas** para receber os novos imóveis que correspondem a cada busca. Separe os endereços por vírgula. Buscas com o campo vazio continuam coletando imóveis. O worker combina os resultados das buscas com o mesmo endereço em um email por coleta. Uma falha de envio fica registrada e o worker ainda tenta entregar os emails dos outros destinatários.
 - Abra caminhos profundos no domínio estático e confira login/redirects reais.
 
 ## Retenção e rollback operacional

@@ -31,43 +31,64 @@ async function enqueue(key = crypto.randomUUID(), ids = [profile]) {
   }, await token());
 }
 
-test('AC03 private tables and enqueue deny non-owner and missing JWT', async () => {
-  for (const jwt of [await token(other), config.ANON_KEY]) {
-    for (
-      const table of [
-        'listings',
-        'listing_marks',
-        'saved_searches',
-        'crawl_jobs',
-        'crawl_jobs',
-        'listing_price_history',
-        'crawl_source_runs',
-      ]
-    ) {
-      const r = await fetch(
-        config.API_URL + '/rest/v1/' + table + '?select=*',
-        {
-          headers: { apikey: config.ANON_KEY, Authorization: 'Bearer ' + jwt },
-        },
-      );
-      const data = await r.json();
-      assert.ok(
-        r.status >= 400 || (Array.isArray(data) && data.length === 0),
-        table,
-      );
-    }
-    const r = await rpc('enqueue_crawl', {
-      request_key: crypto.randomUUID(),
-      search_ids: [profile],
-    }, jwt);
-    assert.equal(r.status, jwt === config.ANON_KEY ? 401 : 403);
+test('AC03 app data and manual enqueue require authentication', async () => {
+  for (
+    const table of [
+      'listings',
+      'listing_comparisons',
+      'listing_marks',
+      'saved_searches',
+      'crawl_jobs',
+      'listing_price_history',
+      'crawl_source_runs',
+      'crawl_run_source_summaries',
+    ]
+  ) {
+    const r = await fetch(config.API_URL + '/rest/v1/' + table + '?select=*', {
+      headers: { apikey: config.ANON_KEY },
+    });
+    const data = await r.json();
+    assert.ok(
+      r.status >= 400 || (Array.isArray(data) && data.length === 0),
+      table,
+    );
   }
+  const r = await rpc('enqueue_crawl', {
+    request_key: crypto.randomUUID(),
+    search_ids: [profile],
+  }, config.ANON_KEY);
+  assert.equal(r.status, 401);
 });
-test('MODEL01 fresh schema has exactly eight application tables', async () => {
+
+test('public password and email-link requests cannot create accounts', async () => {
+  const email = `unprovisioned-${crypto.randomUUID()}@example.test`;
+  for (
+    const [endpoint, body] of [
+      ['signup', { email, password: 'local-test-password-123' }],
+      ['otp', { email, create_user: true }],
+    ] as const
+  ) {
+    const response = await fetch(config.API_URL + '/auth/v1/' + endpoint, {
+      method: 'POST',
+      headers: {
+        apikey: config.ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    assert.ok(response.status >= 400, endpoint);
+    await response.json();
+  }
+  assert.equal(
+    (await sql`select id from auth.users where email=${email}`).length,
+    0,
+  );
+});
+
+test('MODEL01 fresh schema has exactly seven application tables', async () => {
   const rows =
     await sql`select schemaname,tablename from pg_tables where schemaname in ('public','private') order by schemaname,tablename`;
   assert.deepEqual(rows.map((r) => r.schemaname + '.' + r.tablename), [
-    'private.app_owner',
     'private.worker_state',
     'public.crawl_jobs',
     'public.crawl_source_runs',
@@ -186,6 +207,23 @@ test('AC33 idempotent replay returns same durable request', async () => {
   assert.equal(b.body.outcome, 'replayed');
   assert.equal(a.body.job_id, b.body.job_id);
   assert.equal((await sql`select * from crawl_jobs`).length, 1);
+});
+test('AC33 manual request keys are scoped to the signed-in account', async () => {
+  const requestKey = crypto.randomUUID();
+  const first = await enqueue(requestKey);
+  assert.equal(first.status, 200);
+  assert.equal(first.body.outcome, 'accepted');
+  await sql`update crawl_jobs set state='succeeded'`;
+  const second = await rpc('enqueue_crawl', {
+    request_key: requestKey,
+    search_ids: [profile],
+  }, await token(other));
+  assert.equal(second.status, 200);
+  assert.equal(second.body.outcome, 'accepted');
+  assert.notEqual(second.body.job_id, first.body.job_id);
+  const [job] =
+    await sql`select requested_by from crawl_jobs where id=${second.body.job_id}`;
+  assert.equal(job.requested_by, other);
 });
 test('AC34 reused key with changed payload returns 400', async () => {
   const k = crypto.randomUUID();
@@ -420,7 +458,7 @@ test('MODEL06 multiple real price changes within a job retain every observation'
   ]);
   assert.ok(rows.every((x) => x.job_id === r.job_id));
 });
-test('AC03 populated reads direct writes and worker RPCs reject non-owner', async () => {
+test('AC03 authenticated accounts can use shared data and only their own marks', async () => {
   const run = await begin();
   await save(run, [item()]);
   await sql`insert into listing_marks(user_id,listing_id,status) select ${owner},id,'favorite' from listings where url=${item().url}`;
@@ -446,31 +484,34 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
     'listings',
     'listing_marks',
     'saved_searches',
-    'crawl_jobs',
     'listing_price_history',
     'crawl_source_runs',
   ];
   for (const table of tables) {
-    assert.ok((await sql.unsafe('select * from ' + table)).length > 0, table);
     const res = await fetch(config.API_URL + '/rest/v1/' + table, { headers });
-    assert.deepEqual(await res.json(), [], table);
+    assert.equal(res.status, 200, table);
+    const rows = await res.json();
+    assert.equal(rows.length, table === 'listing_marks' ? 0 : 1, table);
   }
+  const comparisons = await fetch(
+    config.API_URL + '/rest/v1/listing_comparisons',
+    { headers },
+  );
+  assert.equal(comparisons.status, 200);
+  assert.equal((await comparisons.json()).length, 1);
   const patchFields: Record<string, unknown> = {
     listings: { title: 'intrusion' },
     listing_marks: { note: 'intrusion' },
-    saved_searches: { name: 'intrusion' },
     crawl_jobs: { state: 'failed' },
     listing_price_history: { price_cents: 1 },
     crawl_source_runs: { error_category: 'intrusion' },
   };
-  for (const table of tables) {
+  for (const table of Object.keys(patchFields)) {
     const beforeRows = await sql.unsafe('select * from ' + table);
     const pk = table === 'listings'
       ? 'url'
       : table === 'listing_marks'
       ? 'listing_id'
-      : table === 'private.worker_state'
-      ? 'singleton'
       : 'id';
     for (const method of ['PATCH', 'DELETE']) {
       const response = await fetch(
@@ -496,44 +537,48 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
     }
   }
   assert.equal((await rpc('seed_saved_search', {}, jwt)).status, 403);
-  const before = await sql`select title from listings`;
-  for (const method of ['PATCH', 'DELETE']) {
-    const res = await fetch(
-      config.API_URL + '/rest/v1/listings?url=eq.' +
-        encodeURIComponent(item().url),
-      {
-        method,
-        headers,
-        body: method === 'PATCH'
-          ? JSON.stringify({ title: 'intrusion' })
-          : undefined,
-      },
-    );
-    const body = await res.json();
-    assert.ok(res.status >= 400 || Array.isArray(body) && body.length === 0);
-  }
+  const search = fromSearchRow(
+    (await sql`select * from saved_searches`)[0] as SearchRow,
+  );
+  const updated = await fetch(
+    config.API_URL + '/rest/v1/saved_searches?id=eq.' + profile,
+    { method: 'PATCH', headers, body: JSON.stringify({ name: 'Shared edit' }) },
+  );
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json())[0].name, 'Shared edit');
   const insert = await fetch(config.API_URL + '/rest/v1/saved_searches', {
     method: 'POST',
     headers,
-    body: JSON.stringify({
-      ...toSearchRow(
-        fromSearchRow(
-          (await sql`select * from saved_searches`)[0] as SearchRow,
-        ),
-      ),
-    }),
+    body: JSON.stringify(toSearchRow({ ...search, id: crypto.randomUUID() })),
   });
-  assert.ok(insert.status >= 400);
+  assert.equal(insert.status, 201);
+  await insert.json();
+  const [listing] = await sql`select id from listings`;
   const mark = await fetch(config.API_URL + '/rest/v1/listing_marks', {
     method: 'POST',
     headers,
     body: JSON.stringify({
       user_id: other,
-      listing_id: (await sql`select id from listings`)[0].id,
+      listing_id: listing.id,
       status: 'favorite',
     }),
   });
-  assert.ok(mark.status >= 400);
+  assert.equal(mark.status, 201);
+  await mark.json();
+  const forgedMark = await fetch(config.API_URL + '/rest/v1/listing_marks', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ user_id: owner, listing_id: listing.id }),
+  });
+  assert.equal(forgedMark.status, 403);
+  await forgedMark.json();
+  const ownMarks = await fetch(config.API_URL + '/rest/v1/listing_marks', {
+    headers,
+  });
+  assert.deepEqual(
+    (await ownMarks.json()).map((row: { user_id: string }) => row.user_id),
+    [other],
+  );
   for (
     const [name, args] of [
       ['claim_crawl_job', { p_kind: 'collect' }],
@@ -561,8 +606,6 @@ test('AC03 populated reads direct writes and worker RPCs reject non-owner', asyn
       }],
     ] as const
   ) assert.equal((await rpc(name, args, jwt)).status, 403);
-  assert.deepEqual(await sql`select title from listings`, before);
-  assert.equal((await sql`select * from listing_marks`).length, 1);
 });
 test('AC28 all invalid typed search families preserve every stored field', async () => {
   const [original] = await sql`select * from saved_searches`;
@@ -815,15 +858,15 @@ test('AC28 padded names obey raw persisted length and retain a valid eighty-char
   }
 });
 
-test('MODEL07 owner health RPC hides coordination state from other identities', async () => {
+test('MODEL07 authenticated accounts can read heartbeat while worker state stays private', async () => {
   await rpc('record_worker_heartbeat', {});
   const health = await rpc('worker_health', {}, await token());
   assert.equal(health.status, 200);
   assert.ok(Math.abs(Date.now() - new Date(health.body).getTime()) < 5000);
-  assert.equal(
-    (await rpc('worker_health', {}, await token(other))).status,
-    403,
-  );
+  const otherHealth = await rpc('worker_health', {}, await token(other));
+  assert.equal(otherHealth.status, 200);
+  assert.equal(otherHealth.body, health.body);
+  assert.equal((await rpc('worker_health', {}, config.ANON_KEY)).status, 401);
   assert.equal(
     (await rpc('record_worker_heartbeat', {}, await token())).status,
     403,
@@ -835,13 +878,6 @@ test('MODEL07 owner health RPC hides coordination state from other identities', 
     },
   });
   assert.equal(hidden.status, 404);
-  const view = await fetch(config.API_URL + '/rest/v1/listing_comparisons', {
-    headers: {
-      apikey: config.ANON_KEY,
-      Authorization: 'Bearer ' + await token(other),
-    },
-  });
-  assert.deepEqual(await view.json(), []);
 });
 test('MODEL08 active verification preserves observed price timestamp and clears removal', async () => {
   const r = await begin();

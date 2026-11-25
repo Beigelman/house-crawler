@@ -4,9 +4,7 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { Brand } from '../../components/Brand';
 import { sendLoginLink, signInWithPassword } from './auth.api';
 
-export function LoginPage(
-  { session, denied }: { session: Session | null; denied: boolean },
-) {
+export function LoginPage({ session }: { session: Session | null }) {
   const [usePassword, setUsePassword] = useState(false);
   const [state, setState] = useState<'idle' | 'submitting' | 'sent' | 'error'>(
     'idle',
@@ -17,7 +15,7 @@ export function LoginPage(
       !next.startsWith('/login')
     ? next
     : '/';
-  if (session && !denied) return <Navigate to={target} replace />;
+  if (session) return <Navigate to={target} replace />;
   return (
     <main className='login'>
       <section className='login-form' aria-labelledby='login-title'>
@@ -28,7 +26,6 @@ export function LoginPage(
             ? 'Acesse seu painel com seu email e senha.'
             : 'Acesse seu painel com um link enviado por email.'}
         </p>
-        {denied && <p role='alert'>Esta conta não tem acesso ao painel.</p>}
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -43,7 +40,6 @@ export function LoginPage(
                   String(fields.get('password')),
                 );
                 if (error) setState('error');
-                // The session listener runs the owner check and redirects.
               } else {
                 const { error } = await sendLoginLink(email, target);
                 setState(error ? 'error' : 'sent');
@@ -102,10 +98,14 @@ export function LoginPage(
               : 'Não foi possível enviar o link. Tente novamente.'}
           </p>
         )}
-        <small>Acesso privado. Apenas o proprietário pode entrar.</small>
+        <small>Use uma conta criada pelo administrador.</small>
       </section>
       <div className='login-story'>
-        <img src='/assets/brasilia-modernist.avif' alt='' fetchPriority='high' />
+        <img
+          src='/assets/brasilia-modernist.avif'
+          alt=''
+          fetchPriority='high'
+        />
         <div className='login-caption'>
           <span>Brasília, DF</span>
           <p>Um lugar para encontrar o seu.</p>

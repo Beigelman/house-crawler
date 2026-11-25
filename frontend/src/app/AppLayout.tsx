@@ -8,7 +8,7 @@ import { signOut } from '../features/auth/auth.api';
 const navigation = [
   ['/', 'Visão geral', 'dashboard'],
   ['/imoveis', 'Imóveis', 'home'],
-  ['/buscas', 'Minhas buscas', 'search'],
+  ['/buscas', 'Buscas salvas', 'search'],
   ['/execucoes', 'Execuções', 'history'],
 ] as const;
 

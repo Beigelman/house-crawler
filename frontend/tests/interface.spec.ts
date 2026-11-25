@@ -49,6 +49,11 @@ test.beforeAll(async () => {
   });
   if (error) throw error;
   session = data.session;
+  await admin.auth.admin.createUser({
+    email: 'other@example.test',
+    password: 'local-test-password-123',
+    email_confirm: true,
+  });
 });
 test.afterAll(async () => {
   await sql.end();
@@ -70,7 +75,6 @@ test.beforeEach(async ({ page }) => {
   await sql`truncate crawl_jobs,saved_searches,listings restart identity cascade`;
   await sql`insert into private.worker_state(singleton) values(true) on conflict do nothing`;
   await sql`update private.worker_state set lease_expires_at='-infinity',job_id=null,seen_at=null`;
-  await sql`insert into private.app_owner(singleton,user_id) values(true,${id}) on conflict(singleton) do update set user_id=excluded.user_id`;
   await sql`insert into saved_searches ${
     sql(
       toSearchRow({
@@ -106,11 +110,11 @@ const list = '/imoveis';
 const detail = '/imoveis/' + encodeURIComponent('https://portal.test/0');
 const routes = ['/', '/imoveis', detail, '/buscas', '/execucoes'];
 
-test('AC01 login lifecycle and owner route restoration', async ({ page }) => {
+test('AC01 login lifecycle and route restoration', async ({ page }) => {
   await page.goto('/login?next=%2Fimoveis');
   await expect(page).toHaveURL(/imoveis$/);
   await page.getByRole('button', { name: 'Sair' }).click();
-  await page.route('**/auth/v1/otp', async (r) => {
+  await page.route(/\/auth\/v1\/otp(?:\?|$)/, async (r) => {
     expect(r.request().postDataJSON().create_user).toBe(false);
     await new Promise((x) => setTimeout(x, 100));
     await r.fulfill({ json: {} });
@@ -120,12 +124,12 @@ test('AC01 login lifecycle and owner route restoration', async ({ page }) => {
   await expect(page.getByText('Enviando link…')).toBeVisible();
   await expect(page.getByText('Confira seu email')).toBeVisible();
 });
-test('AC01 password login retries invalid credentials and restores the requested route', async ({ context }) => {
+test('AC01 a second admin-provisioned account can sign in and browse', async ({ context }) => {
   const page = await context.newPage();
   await page.goto('/imoveis?page=2');
   await expect(page).toHaveURL(/\/login\?next=/);
   await page.getByRole('button', { name: 'Entrar com senha' }).click();
-  await page.getByLabel('Email').fill('owner@example.test');
+  await page.getByLabel('Email').fill('other@example.test');
   const password = page.getByLabel('Senha', { exact: true });
   const submit = page.getByRole('button', { name: 'Entrar', exact: true });
   await password.fill('incorrect-password');
@@ -138,6 +142,7 @@ test('AC01 password login retries invalid credentials and restores the requested
   await submit.click();
   await expect(page).toHaveURL(/\/imoveis\?page=2$/);
   await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible();
+  await expect(page.getByText('Apartamento 30', { exact: true })).toBeVisible();
 });
 test('AC02 every private route redirects signed-out without cached records', async ({ page }) => {
   await page.goto('/');
@@ -227,7 +232,6 @@ test('AC14 dashboard counts source totals and latest outcome', async ({ page }) 
 });
 test('AC15 all private screens show labeled initial loading', async ({ page }) => {
   await page.route('**/rest/v1/**', async (r) => {
-    if (r.request().url().includes('is_app_owner')) return r.continue();
     await new Promise((x) => setTimeout(x, 350));
     await r.continue();
   });
@@ -258,9 +262,7 @@ test('AC17 all private query failures show retry and not empty', async ({ page }
   await page.route(
     '**/rest/v1/**',
     (r) =>
-      r.request().url().includes('is_app_owner')
-        ? r.continue()
-        : r.fulfill({ status: 500, json: { message: 'database unavailable' } }),
+      r.fulfill({ status: 500, json: { message: 'database unavailable' } }),
   );
   for (const route of routes) {
     await page.goto(route);

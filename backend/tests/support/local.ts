@@ -48,7 +48,6 @@ export async function reset() {
   await sql`insert into private.worker_state(singleton) values(true) on conflict do nothing`;
   await sql`update private.worker_state set lease_expires_at = '-infinity', job_id=null, seen_at=null`;
   await token();
-  await sql`insert into private.app_owner(singleton,user_id) values(true,${owner}) on conflict(singleton) do update set user_id=excluded.user_id`;
   await sql`insert into saved_searches ${
     sql(
       toSearchRow({

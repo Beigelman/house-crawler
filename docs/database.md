@@ -8,12 +8,11 @@ A baseline em `backend/supabase/migrations/` instala um banco novo. Ela substitu
 | --- | --- |
 | `public.listings` | Anúncios dos portais, com UUID interno, URL única, identificador opcional da fonte e últimos atributos conhecidos |
 | `public.listing_price_history` | Primeiro preço e mudanças reais, ligados ao anúncio e ao job |
-| `public.listing_marks` | Status e nota do proprietário por UUID de anúncio |
+| `public.listing_marks` | Status e nota privados por usuário e anúncio |
 | `public.saved_searches` | Critérios tipados, limites em centavos, fontes, habilitação e lista de emails para novidades |
 | `public.crawl_jobs` | Fila e execução em um registro: origem, chave idempotente, snapshot, estados e email |
 | `public.crawl_source_runs` | Resultado, quantidade e diagnóstico de cada fonte/busca em um job |
 | `private.worker_state` | Heartbeat, job atual, token de fencing e validade do lease |
-| `private.app_owner` | UUID do usuário autorizado no Supabase Auth |
 
 Um anúncio representa uma publicação, não um imóvel físico deduplicado entre portais. `(source, source_listing_id)` é único quando há identificador confiável; a URL canônica também é única. Relacionamentos usam o UUID interno. A aplicação conserva URLs nas rotas de detalhe para permitir links diretos.
 
@@ -27,8 +26,7 @@ Não existem colunas legadas `titulo`/`valor`, flags de importação nem tabela 
 
 | RPC | Responsabilidade |
 | --- | --- |
-| `is_app_owner` | Autoriza a identidade nas policies/RPCs |
-| `enqueue_crawl` | Persiste um job manual, replay idempotente, limite de 60 segundos e uma tarefa ativa |
+| `enqueue_crawl` | Persiste um job manual com replay e limite de 60 segundos por usuário e uma tarefa ativa na fila |
 | `enqueue_scheduled_crawl` | Persiste uma tarefa por horário de Brasília, sem repetir slots concluídos |
 | `seed_saved_search` | Configuração inicial padrão quando não há buscas |
 | `claim_crawl_job` | Claim exclusivo e snapshot dos critérios; interrompe tarefa com lease expirado |
@@ -37,7 +35,7 @@ Não existem colunas legadas `titulo`/`valor`, flags de importação nem tabela 
 | `record_crawl_source` | Registra o resultado da fonte com lease válido |
 | `finish_crawl_job` | Finaliza o job, resultado de email e diagnóstico geral sanitizado, liberando o lease |
 | `record_worker_heartbeat` | Atualiza a saúde com relógio do banco |
-| `worker_health` | Retorna apenas o heartbeat para o proprietário, sem expor o token |
+| `worker_health` | Retorna o heartbeat para usuários autenticados |
 
 O lease é renovado a cada 30 segundos e expira após 120 segundos. Claim, enqueue manual e agendado são serializados no banco. Uma CLI direta não ultrapassa um job já enfileirado. Todos os caminhos de escrita do worker validam o fencing token. Falhas gerais ficam em `crawl_jobs.error_category`; resultados por fonte aceitam apenas portais reais. Um job corresponde a uma tentativa; não há retentativa automática.
 
@@ -45,7 +43,7 @@ Ausência numa busca não confirma remoção. 403, timeout e falha de parser pre
 
 ## Acesso e desenvolvimento
 
-As seis tabelas públicas usam RLS e grants restritos ao proprietário; somente buscas e notas podem ser escritas pela sessão. O worker usa credencial de servidor. As tabelas privadas não são expostas no Data API. O usuário proprietário referencia `auth.users`.
+As seis tabelas públicas usam RLS. Cada conta autenticada pode consultar anúncios, histórico e execuções, criar e editar as buscas compartilhadas e solicitar coletas. As buscas incluem os emails de notificação. Status e notas são restritos ao usuário que os gravou. O worker usa credencial de servidor para as operações da fila e a gravação de dados coletados.
 
 ```sh
 rtk supabase db reset --local --no-seed --workdir backend

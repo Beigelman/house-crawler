@@ -19,8 +19,8 @@ export function SearchesPage() {
   return (
     <>
       <PageHeading
-        title='Minhas buscas'
-        description='Defina os bairros, a faixa de preço e os critérios de cada coleta.'
+        title='Buscas salvas'
+        description='Defina os critérios das coletas compartilhadas entre as contas do painel.'
         action={
           <button
             type='button'

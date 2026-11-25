@@ -1,13 +1,13 @@
-import { RequireOwner } from '../features/auth/RequireOwner';
+import { RequireSession } from '../features/auth/RequireSession';
 import { AppLayout } from './AppLayout';
 import { AppRoutes } from './routes';
 
 export function App() {
   return (
-    <RequireOwner>
+    <RequireSession>
       <AppLayout>
         <AppRoutes />
       </AppLayout>
-    </RequireOwner>
+    </RequireSession>
   );
 }

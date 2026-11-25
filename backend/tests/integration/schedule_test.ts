@@ -53,13 +53,6 @@ Deno.test('SCHED-02/03 concurrent polls persist one enabled-profile job and neve
 
 Deno.test('SCHED-04 active manual work defers scheduled work; empty setup enqueues nothing', async () => {
   await local.reset();
-  await local.sql`delete from private.app_owner`;
-  assert.equal(
-    (await local.rpc('enqueue_scheduled_crawl', {})).body.outcome,
-    'no_owner',
-  );
-  assert.equal((await local.sql`select * from crawl_jobs`).length, 0);
-  await local.reset();
   await local.sql`update saved_searches set enabled=false`;
   assert.equal(
     (await local.rpc('enqueue_scheduled_crawl', {})).body.outcome,

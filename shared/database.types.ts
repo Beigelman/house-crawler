@@ -405,7 +405,6 @@ export type Database = {
         };
         Returns: undefined;
       };
-      is_app_owner: { Args: never; Returns: boolean };
       record_crawl_source: {
         Args: {
           p_count: number;
