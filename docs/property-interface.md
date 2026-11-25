@@ -73,7 +73,7 @@ Saídas: 0 para execução concluída, 1 para parcial/falha, 2 para coletor ocup
 - Abra uma rota privada sem sessão e consulte o Data API com outra identidade: nenhum dado privado deve aparecer.
 - Edite uma busca, solicite uma coleta e feche o navegador. Verifique queued/running e o resultado em Execuções após reabrir.
 - Confirme no host que ambos os portais são acessíveis. Um 403 aparece como falha da fonte; não exclui histórico. Acesso em nuvem não foi presumido nem testado.
-- Confira os novos anúncios e o resultado separado do email. Resend usa os destinatários do ambiente; uma falha de email não reexecuta a coleta nem dispara reenvio automático.
+- Confira os novos anúncios e o resultado separado do email. Preencha **Email para novidades** em **Minhas buscas** para receber os novos imóveis que correspondem a cada busca. Separe os endereços por vírgula. Buscas com o campo vazio continuam coletando imóveis. O worker combina os resultados das buscas com o mesmo endereço em um email por coleta. Uma falha de envio fica registrada e o worker ainda tenta entregar os emails dos outros destinatários.
 - Abra caminhos profundos no domínio estático e confira login/redirects reais.
 
 ## Retenção e rollback operacional

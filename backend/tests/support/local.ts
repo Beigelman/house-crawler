@@ -55,6 +55,7 @@ export async function reset() {
         id: profile,
         name: 'Minha busca',
         enabled: true,
+        notificationEmails: ['local@example.test'],
         providers: ['dfimoveis', 'wimoveis'],
         params: {
           neighborhoods: ['asa-norte', 'asa-sul', 'octogonal'],

@@ -1,6 +1,5 @@
 import { logger, withLogContext } from '../../platform/logger.ts';
 import type { CrawlJob, Dependencies } from '../ports.ts';
-import type { ScrapedListing } from '../../../../shared/property.ts';
 import { providerIdForUrl } from '../provider-id.ts';
 
 export async function validateProperties(
@@ -75,5 +74,5 @@ export async function validateProperties(
       },
     );
   }
-  return { successes, failures, newProperties: [] as ScrapedListing[] };
+  return { successes, failures, notifications: null };
 }

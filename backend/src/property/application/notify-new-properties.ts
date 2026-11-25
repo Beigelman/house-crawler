@@ -4,29 +4,32 @@ import type { ScrapedListing } from '../../../../shared/property.ts';
 
 export async function notifyNewProperties(
   run: CrawlJob,
-  items: ScrapedListing[],
+  notifications: ReadonlyMap<string, ScrapedListing[]>,
   deps: Dependencies,
   signal: AbortSignal,
 ): Promise<EmailState> {
-  let email: EmailState = 'not_needed';
-  if (items.length) {
-    if (signal.aborted) throw signal.reason;
+  let failed = false;
+  for (const [recipient, items] of notifications) {
+    signal.throwIfAborted();
     await deps.store.renew(run);
-    return await withLogContext({
+    signal.throwIfAborted();
+    await withLogContext({
       stage: 'notification',
       listing_urls: items.map((p) => p.url),
     }, async () => {
       try {
-        const result = await deps.sendEmail(items);
-        email = result.success ? 'sent' : 'failed';
-        if (!result.success) logger.error('notification.failed', result.error);
-        else logger.info('notification.sent', { count: items.length });
+        const result = await deps.sendEmail(items, recipient);
+        if (result.success) {
+          logger.info('notification.sent', { count: items.length });
+        } else {
+          failed = true;
+          logger.error('notification.failed', result.error);
+        }
       } catch (e) {
         logger.error('notification.failed', e);
-        email = 'failed';
+        failed = true;
       }
-      return email;
     });
   }
-  return email;
+  return failed ? 'failed' : notifications.size ? 'sent' : 'not_needed';
 }

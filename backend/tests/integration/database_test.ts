@@ -131,6 +131,9 @@ test('AC28 invalid typed search writes are atomic', async () => {
       { sources: ['unknown'] },
       { name: '' },
       { name: 'x'.repeat(81) },
+      { notification_emails: ['valid@example.test', 'invalid'] },
+      { notification_emails: ['one@example.test,two@example.test'] },
+      { notification_emails: [null] },
     ]
   ) {
     await assert.rejects(() =>

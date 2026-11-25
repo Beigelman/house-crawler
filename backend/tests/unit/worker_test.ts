@@ -211,19 +211,27 @@ Deno.test('AC63 only new listings sent through existing email boundary', async (
   await executeRun('collect', h);
   await executeRun('collect', h);
   assert.equal(h.calls.filter((x) => x.name === 'email').length, 1);
-  assert.deepEqual(h.calls.find((x) => x.name === 'email')!.value, [listing]);
+  assert.deepEqual(h.calls.find((x) => x.name === 'email')!.value, {
+    items: [listing],
+    recipient: 'test@example.test',
+  });
 });
-Deno.test('AC64 email failure keeps committed listings and never resends', async () => {
+Deno.test('AC64 email failure keeps committed listings and the worker tries the next recipient', async () => {
   const h = harness();
-  let count = 0;
+  const run = await h.store.claim();
+  run.searches[0].notificationEmails.push('second@example.test');
+  const recipients: string[] = [];
   await executeRun('collect', {
     ...h,
-    sendEmail: async () => {
-      count++;
-      return { success: false, error: 'delivery' };
+    store: { ...h.store, claim: async () => run },
+    sendEmail: async (_items, recipient) => {
+      recipients.push(recipient);
+      return recipient === 'test@example.test'
+        ? { success: false, error: 'delivery' }
+        : { success: true };
     },
   });
-  assert.equal(count, 1);
+  assert.deepEqual(recipients, ['test@example.test', 'second@example.test']);
   assert.ok(h.calls.find((x) => x.name === 'save'));
   assert.deepEqual(h.calls.find((x) => x.name === 'finish')!.value, {
     state: 'succeeded',

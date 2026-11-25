@@ -44,6 +44,7 @@ export type SavedSearch = {
   id: string;
   name: string;
   enabled: boolean;
+  notificationEmails: string[];
   params: SearchParams;
   providers: string[];
 };

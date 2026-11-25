@@ -77,6 +77,7 @@ test.beforeEach(async ({ page }) => {
         id: pid,
         name: 'Minha busca',
         enabled: true,
+        notificationEmails: [],
         params,
         providers: ['dfimoveis', 'wimoveis'],
       }),
@@ -802,6 +803,9 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
   await page.goto('/buscas');
   await page.getByRole('button', { name: 'Nova busca', exact: false }).click();
   const form = page.locator('form.profile').first();
+  const emailField = form.getByLabel('Email para novidades');
+  await emailField.fill('valid@example.test,invalid');
+  await expect(form.locator('input[type=email]:invalid')).toHaveCount(1);
   async function setForm(
     name: string,
     values: {
@@ -812,6 +816,7 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
       minPrice: string;
       maxPrice: string;
       neighborhoods: string;
+      notificationEmails: string[];
       elevator: boolean;
       parking: boolean;
       df: boolean;
@@ -820,6 +825,7 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
     },
   ) {
     await form.getByLabel('Nome da busca').fill(name);
+    await emailField.fill(values.notificationEmails.join(', '));
     for (
       const [label, value] of [
         ['Bairros', values.neighborhoods],
@@ -856,6 +862,7 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
     minPrice: '800000',
     maxPrice: '1600000',
     neighborhoods: 'asa-norte,asa-sul',
+    notificationEmails: ['first@example.test', 'second@example.test'],
     elevator: true,
     parking: true,
     df: true,
@@ -864,11 +871,15 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
   };
   await setForm('A nova busca', first);
   await page.reload();
+  await expect(emailField).toHaveValue(
+    first.notificationEmails.join(','),
+  );
   let [stored] =
     await sql`select * from saved_searches where name='A nova busca'`;
   expect(fromSearchRow(stored as Parameters<typeof fromSearchRow>[0]))
     .toMatchObject({
       enabled: false,
+      notificationEmails: first.notificationEmails,
       providers: ['dfimoveis'],
       params: {
         neighborhoods: ['asa-norte', 'asa-sul'],
@@ -890,6 +901,7 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
     minPrice: '1000000',
     maxPrice: '2000000',
     neighborhoods: 'octogonal',
+    notificationEmails: ['second@example.test', 'third@example.test'],
     elevator: false,
     parking: false,
     df: false,
@@ -903,6 +915,7 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
   expect(fromSearchRow(stored as Parameters<typeof fromSearchRow>[0]))
     .toMatchObject({
       enabled: true,
+      notificationEmails: second.notificationEmails,
       providers: ['wimoveis'],
       params: {
         neighborhoods: ['octogonal'],
@@ -919,6 +932,14 @@ test('AC27 create and edit persist every search field', async ({ page }) => {
   await expect(page.getByLabel('Nome da busca').first()).toHaveValue(
     'A busca editada',
   );
+  await expect(emailField).toHaveValue(
+    second.notificationEmails.join(','),
+  );
+  await emailField.clear();
+  await form.getByRole('button', { name: 'Salvar busca' }).click();
+  await expect(form.getByRole('status')).toHaveText('Busca salva');
+  await page.reload();
+  await expect(emailField).toHaveValue('');
 });
 test('AC42 exact run order counts timestamps and email state are rendered separately', async ({ page }) => {
   await sql`insert into crawl_jobs(kind,state,search_snapshot,started_at,finished_at,email_state) values('collect','succeeded','[]','2020-01-01','2020-01-02','sent')`;

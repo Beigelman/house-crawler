@@ -30,6 +30,7 @@ export function SearchesPage() {
                 id: crypto.randomUUID(),
                 name: 'Nova busca',
                 enabled: true,
+                notificationEmails: [],
                 providers: ['wimoveis', 'dfimoveis'],
                 params: {
                   neighborhoods: ['asa-norte'],

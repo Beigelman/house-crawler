@@ -92,12 +92,13 @@ boundary(
     await local
       .sql`update saved_searches set bedrooms=array[4]`;
     await local
-      .sql`insert into saved_searches select (jsonb_populate_record(null::saved_searches,to_jsonb(s)||jsonb_build_object('id','44444444-4444-4444-8444-444444444444','name','Later','bedrooms',jsonb_build_array(3)))).* from saved_searches s`;
+      .sql`insert into saved_searches select (jsonb_populate_record(null::saved_searches,to_jsonb(s)||jsonb_build_object('id','44444444-4444-4444-8444-444444444444','name','Later','bedrooms',jsonb_build_array(3),'notification_emails',jsonb_build_array('later@example.test')))).* from saved_searches s`;
     let n = 0;
     const payloads: ScrapedListing[][] = [];
     const deps = {
       ...realDeps(),
-      sendEmail: (items: ScrapedListing[]) => {
+      sendEmail: (items: ScrapedListing[], recipient: string) => {
+        assert.equal(recipient, 'later@example.test');
         n++;
         payloads.push(items);
         return Promise.resolve({ success: true });
@@ -283,7 +284,7 @@ async function withEmailCapture(
   const values = names.map((n) => Deno.env.get(n));
   Deno.env.set('RESEND_API_KEY', 're_local-test-sentinel');
   Deno.env.set('FROM_EMAIL', 'radar@example.test');
-  Deno.env.set('TO_EMAILS', 'one@example.test,two@example.test');
+  Deno.env.set('TO_EMAILS', 'legacy@example.test');
   const calls: Record<string, unknown>[] = [];
   globalThis.fetch = (input, init) => {
     if (String(input).startsWith('https://api.resend.com/')) {
@@ -317,34 +318,61 @@ async function withEmailCapture(
   }
 }
 boundary(
-  'AC63 existing email adapter uses run-wide new matches and environment recipients',
+  'AC63 multiple recipients receive only their new matches, including overlapping searches',
   async () => {
-    await local.sql`update saved_searches set sources=array['wimoveis']`;
     await local
-      .sql`update saved_searches set bedrooms=array[4]`;
+      .sql`update saved_searches set sources=array['wimoveis'], bedrooms=array[3], notification_emails=array['one@example.test','two@example.test','three@example.test']`;
     await local
-      .sql`insert into saved_searches select (jsonb_populate_record(null::saved_searches,to_jsonb(s)||jsonb_build_object('id','44444444-4444-4444-8444-444444444444','name','Later','bedrooms',jsonb_build_array(3)))).* from saved_searches s`;
+      .sql`insert into saved_searches
+      select (jsonb_populate_record(null::saved_searches, to_jsonb(s) || jsonb_build_object(
+        'id', gen_random_uuid(), 'name', p.name, 'bedrooms', p.bedrooms, 'notification_emails', p.emails
+      ))).*
+      from saved_searches s cross join (values
+        ('Two', array[3,4], array['two@example.test']),
+        ('No recipient', array[3], array[]::text[])
+      ) as p(name, bedrooms, emails)`;
+    const other = { ...listing, url: listing.url + '-other', bedrooms: 4 };
     await withEmailCapture(false, async (send, calls) => {
-      await executeRun('collect', { ...realDeps(), sendEmail: send });
-      assert.equal(calls.length, 1);
-      assert.deepEqual(calls[0].to, ['one@example.test', 'two@example.test']);
-      assert.equal(calls[0].from, 'radar@example.test');
-      assert.ok(String(calls[0].html).includes(listing.url));
+      await executeRun('collect', {
+        ...realDeps([listing, other]),
+        sendEmail: send,
+      });
+      assert.equal(calls.length, 3);
+      assert.ok(calls.every((call) => call.from === 'radar@example.test'));
+      for (
+        const [address, includesOther] of [
+          ['one@example.test', false],
+          ['two@example.test', true],
+          ['three@example.test', false],
+        ] as const
+      ) {
+        const call = calls.find((call) => String(call.to) === address);
+        assert.ok(call, `Missing digest for ${address}`);
+        assert.deepEqual(call.to, [address]);
+        assert.ok(String(call.html).includes(listing.url));
+        assert.equal(String(call.html).includes(other.url), includesOther);
+        assert.match(
+          String(call.subject),
+          includesOther ? /2 Novos Imóveis/ : /1 Novo Imóvel/,
+        );
+      }
       await executeRun('collect', {
         ...realDeps([{ ...listing, price_cents: 110000000 }]),
         sendEmail: send,
       });
-      assert.equal(calls.length, 1);
-      assert.equal((await local.sql`select * from listings`).length, 1);
+      assert.equal(calls.length, 3);
+      assert.equal((await local.sql`select * from listings`).length, 2);
       assert.equal(
         Number(
-          (await local.sql`select price_cents from listings`)[0].price_cents,
+          (await local
+            .sql`select price_cents from listings where url=${listing.url}`)[0]
+            .price_cents,
         ),
         110000000,
       );
       assert.equal(
         (await local.sql`select * from listing_price_history`).length,
-        2,
+        3,
       );
     });
   },

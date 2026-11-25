@@ -201,6 +201,7 @@ Deno.test('persistence and notification errors retain stage and listing context'
   assert.equal(notification.job_id, 'run');
   assert.deepEqual(notification.listing_urls, [listing.url]);
   assert.equal(notification.error.message, 'delivery failed');
+  assert.ok(!JSON.stringify(records).includes('test@example.test'));
 });
 
 Deno.test('validation failures include run, provider and listing URL', async () => {

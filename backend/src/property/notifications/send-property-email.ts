@@ -6,58 +6,18 @@ import {
   generateEmailText,
 } from './property-email-template.ts';
 
-type EmailConfig = {
-  apiKey: string | undefined;
-  fromEmail: string;
-  toEmails: string[];
-};
-
-function getEmailConfig(): EmailConfig {
-  const toEmails =
-    Deno.env.get('TO_EMAILS')?.split(',').map((email) => email.trim()) || [];
-  return {
-    apiKey: Deno.env.get('RESEND_API_KEY'),
-    fromEmail: Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev',
-    toEmails,
-  };
-}
-
-/**
- * Valida se as variáveis de ambiente necessárias estão configuradas
- */
-function validateEmailConfig(
-  config: EmailConfig,
-): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (!config.apiKey) {
-    errors.push('RESEND_API_KEY não está configurada');
-  }
-
-  if (!config.toEmails) {
-    errors.push('TO_EMAILS não está configurada');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
-
 /**
  * Envia email com os novos imóveis encontrados
  */
 export async function sendNewPropertiesEmail(
   properties: ScrapedListing[],
+  recipient: string,
 ): Promise<{ success: boolean; error?: string }> {
-  // Valida configuração
-  const config = getEmailConfig();
-
-  const validation = validateEmailConfig(config);
-  if (!validation.valid) {
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  if (!apiKey) {
     return {
       success: false,
-      error: `Configuração de email inválida: ${validation.errors.join(', ')}`,
+      error: 'RESEND_API_KEY não está configurada',
     };
   }
 
@@ -70,45 +30,37 @@ export async function sendNewPropertiesEmail(
   }
 
   try {
-    const resend = new Resend(config.apiKey);
-
-    // Separa os emails (pode ser uma lista separada por vírgula)
-    const recipients = config.toEmails;
-
-    // Gera o conteúdo do email
-    const htmlContent = generateEmailHTML(properties);
-    const textContent = generateEmailText(properties);
-
-    // Envia o email
+    const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
-      from: config.fromEmail,
-      to: recipients,
+      from: Deno.env.get('FROM_EMAIL') || 'onboarding@resend.dev',
+      to: [recipient],
       subject: `🏠 ${properties.length} ${
         properties.length === 1
           ? 'Novo Imóvel Encontrado'
           : 'Novos Imóveis Encontrados'
       }!`,
-      html: htmlContent,
-      text: textContent,
+      html: generateEmailHTML(properties),
+      text: generateEmailText(properties),
     });
 
     if (error) {
-      logger.error('email.delivery_failed', error);
+      const message = error.message.replaceAll(recipient, '[REDACTED]');
+      logger.error('email.delivery_failed', { name: error.name, message });
       return {
         success: false,
-        error: `Erro ao enviar email: ${error.message}`,
+        error: `Erro ao enviar email: ${message}`,
       };
     }
 
     logger.info('email.sent', { email_id: data?.id });
     return { success: true };
   } catch (error) {
-    logger.error('email.failed', error);
+    const message = (error instanceof Error ? error.message : String(error))
+      .replaceAll(recipient, '[REDACTED]');
+    logger.error('email.failed', message);
     return {
       success: false,
-      error: `Exceção ao enviar email: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      error: `Exceção ao enviar email: ${message}`,
     };
   }
 }

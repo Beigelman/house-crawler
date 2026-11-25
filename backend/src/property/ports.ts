@@ -66,5 +66,6 @@ export type Dependencies = {
   ) => Provider;
   sendEmail: (
     items: ScrapedListing[],
+    recipient: string,
   ) => Promise<{ success: boolean; error?: string }>;
 };

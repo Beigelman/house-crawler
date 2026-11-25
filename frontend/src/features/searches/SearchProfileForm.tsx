@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { SavedSearch } from '../../../../shared/property.ts';
 import { saveProfile } from './searches.api';
 
@@ -19,8 +19,12 @@ export function SearchProfileForm(
   { initial, saved }: { initial: SavedSearch; saved: () => void },
 ) {
   const [profile, setProfile] = useState(initial);
+  const [emailInput, setEmailInput] = useState(
+    initial.notificationEmails.join(','),
+  );
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState(false);
+  const emailId = useId();
   const setParam = <Key extends keyof SavedSearch['params']>(
     key: Key,
     value: SavedSearch['params'][Key],
@@ -32,7 +36,15 @@ export function SearchProfileForm(
         e.preventDefault();
         setPending(true);
         try {
-          await saveProfile(profile);
+          const notificationEmails = [
+            ...new Set(
+              emailInput.split(',').map((email) => email.trim()).filter(
+                Boolean,
+              ),
+            ),
+          ];
+          setEmailInput(notificationEmails.join(','));
+          await saveProfile({ ...profile, notificationEmails });
           setMessage('Busca salva');
           saved();
         } catch {
@@ -100,6 +112,23 @@ export function SearchProfileForm(
             />
           </label>
         ))}
+        <div className='notification-email'>
+          <label>
+            Email para novidades
+            <input
+              type='email'
+              multiple
+              autoComplete='email'
+              aria-describedby={emailId}
+              value={emailInput}
+              onChange={(e) => setEmailInput(e.target.value)}
+            />
+          </label>
+          <small id={emailId}>
+            Separe os endereços por vírgula. Deixe em branco para desativar os
+            emails.
+          </small>
+        </div>
       </div>
       <div className='toggles'>
         {amenityFields

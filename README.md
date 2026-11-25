@@ -66,7 +66,13 @@ A credencial `SUPABASE_SECRET_KEY` (`sb_secret_...`) pertence exclusivamente ao 
 Use a chave **Secret** de `rtk supabase status --workdir backend` no ambiente local
 ou de **Settings > API Keys** no projeto hospedado. Não use a chave publishable
 nem a chave JWT legada `service_role`.
-Configure também `RESEND_API_KEY`, `FROM_EMAIL` e `TO_EMAILS` para os emails.
+Configure `RESEND_API_KEY` e `FROM_EMAIL` para o envio. Em **Minhas buscas**,
+preencha **Email para novidades** em cada busca que deve enviar notificações.
+Separe os endereços por vírgula para enviar a mais de um destinatário.
+Ao atualizar uma instalação que ainda usa `TO_EMAILS`, aplique a migration de
+destinatários e publique a interface. Salve os destinatários das buscas existentes
+antes de atualizar o worker. A partir dessa atualização, `TO_EMAILS` pode ser
+removida do ambiente.
 
 ```sh
 rtk deno task --config backend/deno.json run        # Uma coleta

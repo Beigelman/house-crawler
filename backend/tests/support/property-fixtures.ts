@@ -36,6 +36,7 @@ export function harness(outcomes: ('succeeded' | 'failed')[] = ['succeeded']) {
         id: 'profile',
         name: 'Test',
         enabled: true,
+        notificationEmails: ['test@example.test'],
         params,
         providers: outcomes.map((_, i) => 'source' + i),
       }],
@@ -64,8 +65,8 @@ export function harness(outcomes: ('succeeded' | 'failed')[] = ['succeeded']) {
     }),
     verify: async () => ({ last_check_result: 'unknown' }),
   });
-  const sendEmail = async (items: ScrapedListing[]) => {
-    calls.push({ name: 'email', value: items });
+  const sendEmail = async (items: ScrapedListing[], recipient: string) => {
+    calls.push({ name: 'email', value: { items, recipient } });
     return { success: true };
   };
   return { calls, store, providers, sendEmail };

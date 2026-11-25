@@ -9,7 +9,7 @@ A baseline em `backend/supabase/migrations/` instala um banco novo. Ela substitu
 | `public.listings` | Anúncios dos portais, com UUID interno, URL única, identificador opcional da fonte e últimos atributos conhecidos |
 | `public.listing_price_history` | Primeiro preço e mudanças reais, ligados ao anúncio e ao job |
 | `public.listing_marks` | Status e nota do proprietário por UUID de anúncio |
-| `public.saved_searches` | Critérios tipados, limites em centavos, fontes e habilitação |
+| `public.saved_searches` | Critérios tipados, limites em centavos, fontes, habilitação e lista de emails para novidades |
 | `public.crawl_jobs` | Fila e execução em um registro: origem, chave idempotente, snapshot, estados e email |
 | `public.crawl_source_runs` | Resultado, quantidade e diagnóstico de cada fonte/busca em um job |
 | `private.worker_state` | Heartbeat, job atual, token de fencing e validade do lease |

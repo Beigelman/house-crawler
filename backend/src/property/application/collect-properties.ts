@@ -93,14 +93,24 @@ export async function collectProperties(
       });
     }
   }
-  const news = [...newLinks].flatMap((url) => {
-    const observed = observations.get(url)!;
-    return run.searches.some((profile) =>
-        profile.providers.some((source) => observed.sources.has(source)) &&
-        matchesProfile(observed.property, profile.params)
-      )
-      ? [observed.property]
-      : [];
-  });
-  return { successes, failures, newProperties: news };
+  const notifications = new Map<string, ScrapedListing[]>();
+  for (const url of newLinks) {
+    const { property, sources } = observations.get(url)!;
+    const recipients = new Set<string>();
+    for (const profile of run.searches) {
+      if (
+        profile.notificationEmails.length &&
+        profile.providers.some((source) => sources.has(source)) &&
+        matchesProfile(property, profile.params)
+      ) {
+        for (const email of profile.notificationEmails) recipients.add(email);
+      }
+    }
+    for (const recipient of recipients) {
+      const items = notifications.get(recipient) ?? [];
+      items.push(property);
+      notifications.set(recipient, items);
+    }
+  }
+  return { successes, failures, notifications };
 }

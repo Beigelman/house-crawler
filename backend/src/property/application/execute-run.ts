@@ -38,7 +38,9 @@ export async function executeRun(
       { job_id: run.job_id, job_kind: run.kind },
       async () => {
         const started = performance.now();
-        logger.info('run.started', { searches: run.searches });
+        logger.info('run.started', {
+          search_ids: run.searches.map((search) => search.id),
+        });
         const controller = new AbortController();
         let renewal: Promise<unknown> = Promise.resolve();
         const timer = setInterval(() => {
@@ -56,12 +58,14 @@ export async function executeRun(
             ? await validateProperties(run, deps, controller.signal)
             : await collectProperties(run, deps, controller.signal);
           const { successes, failures } = result;
-          email = await notifyNewProperties(
-            run,
-            result.newProperties,
-            deps,
-            controller.signal,
-          );
+          if (result.notifications) {
+            email = await notifyNewProperties(
+              run,
+              result.notifications,
+              deps,
+              controller.signal,
+            );
+          }
           const state = failures
             ? (successes ? 'partial' : 'failed')
             : 'succeeded';

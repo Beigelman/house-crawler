@@ -296,6 +296,7 @@ export type Database = {
           min_suites: number;
           name: string;
           neighborhoods: string[];
+          notification_emails: string[];
           sources: string[];
         };
         Insert: {
@@ -312,6 +313,7 @@ export type Database = {
           min_suites: number;
           name: string;
           neighborhoods: string[];
+          notification_emails?: string[];
           sources: string[];
         };
         Update: {
@@ -328,6 +330,7 @@ export type Database = {
           min_suites?: number;
           name?: string;
           neighborhoods?: string[];
+          notification_emails?: string[];
           sources?: string[];
         };
         Relationships: [];

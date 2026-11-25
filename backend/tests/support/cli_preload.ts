@@ -8,7 +8,6 @@ for (
     SUPABASE_SECRET_KEY: config.SECRET_KEY,
     RESEND_API_KEY: 're_local-test',
     FROM_EMAIL: 'radar@example.test',
-    TO_EMAILS: 'local@example.test',
   })
 ) Deno.env.set(key, value);
 console.log('TEST_WORKER_PID=' + Deno.pid);

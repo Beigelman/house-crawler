@@ -10,6 +10,7 @@ export function fromSearchRow(row: SearchRow): SavedSearch {
     id: row.id,
     name: row.name,
     enabled: row.enabled,
+    notificationEmails: row.notification_emails,
     providers: row.sources,
     params: {
       neighborhoods: row.neighborhoods,
@@ -30,6 +31,7 @@ export function toSearchRow(search: SavedSearch) {
     id: search.id,
     name: search.name,
     enabled: search.enabled,
+    notification_emails: search.notificationEmails,
     neighborhoods: search.params.neighborhoods,
     bedrooms: search.params.numberOfRooms,
     min_suites: search.params.numberOfSuites,

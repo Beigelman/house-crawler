@@ -31,6 +31,10 @@
   font-weight: 500;
 }
 
+.notification-email {
+  grid-column: span 2;
+}
+
 .toggles {
   display: flex;
   flex-wrap: wrap;
