@@ -408,6 +408,27 @@ test('AC42 runs list newest and displays source and email outcomes', async ({ pa
   await expect(page.getByText('Email: failed')).toBeVisible();
   await expect(page.getByText(/blocked/)).toBeVisible();
 });
+test('validation history summarizes large runs by portal', async ({ page }) => {
+  const [run] =
+    await sql`insert into crawl_jobs(kind,state,started_at,finished_at)
+      values('validate','partial',now(),now()) returning id`;
+  await sql`insert into crawl_source_runs(job_id,source,count,outcome)
+    select ${run.id}, 'dfimoveis', 1, 'succeeded' from generate_series(1, 1000)`;
+  await sql`insert into crawl_source_runs(job_id,source,count,outcome,error_category)
+    values (${run.id}, 'dfimoveis', 1, 'failed', 'verification_unknown'),
+      (${run.id}, 'wimoveis', 1, 'succeeded', null)`;
+
+  await page.goto('/execucoes');
+  const card = page.locator('.runs > article').filter({
+    has: page.getByRole('button', { name: /Validação/ }),
+  });
+  const sources = card.locator('.source-row');
+  await expect(sources).toHaveCount(2);
+  await expect(sources.filter({ hasText: 'DF Imóveis' }))
+    .toContainText('1.001 anúncios · 1 inconclusivo');
+  await expect(sources.filter({ hasText: 'Wimoveis' }))
+    .toContainText('1 anúncio · 0 inconclusivos');
+});
 test('AC43 offline heartbeat displays last-seen or never connected', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Nunca conectado')).toBeVisible();

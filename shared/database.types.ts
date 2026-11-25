@@ -334,6 +334,26 @@ export type Database = {
       };
     };
     Views: {
+      crawl_run_source_summaries: {
+        Row: {
+          count: number | null;
+          error_category: string | null;
+          id: number | null;
+          inconclusive: number | null;
+          job_id: string | null;
+          outcome: string | null;
+          source: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'crawl_source_runs_job_id_fkey';
+            columns: ['job_id'];
+            isOneToOne: false;
+            referencedRelation: 'crawl_jobs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       listing_comparisons: {
         Row: {
           area_m2: number | null;

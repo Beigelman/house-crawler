@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { Database } from '../../../../shared/database.types';
 import { date, source } from '../../lib/formatters';
 import { getRuns } from './runs.api';
 import { LoadingState } from '../../components/LoadingState';
@@ -7,6 +8,9 @@ import { ErrorState } from '../../components/ErrorState';
 import { EmptyState } from '../../components/EmptyState';
 import { PageHeading } from '../../components/PageHeading';
 import { Icon } from '../../components/Icon';
+
+type SourceSummary =
+  Database['public']['Views']['crawl_run_source_summaries']['Row'];
 
 export function RunsPage() {
   const runsQuery = useQuery({
@@ -63,22 +67,28 @@ export function RunsPage() {
                 </button>
                 <small>{r.id}</small>
                 <p>Fim: {date(r.finished_at)} · Email: {r.email_state}</p>
-                {r.crawl_source_runs.map((
-                  s: {
-                    id: number;
-                    source: string;
-                    count: number;
-                    outcome: string;
-                    error_category: string | null;
-                  },
-                ) => (
-                  <div className='source-row' key={s.id}>
-                    <span>{source(s.source)}</span>
-                    <span>
-                      {s.count} anúncios · {s.outcome} {s.error_category}
-                    </span>
-                  </div>
-                ))}
+                {r.crawl_run_source_summaries.map((s: SourceSummary) => {
+                  const count = s.count ?? 0;
+                  const inconclusive = s.inconclusive ?? 0;
+                  const listingLabel = count === 1 ? 'anúncio' : 'anúncios';
+                  const inconclusiveLabel = inconclusive === 1
+                    ? 'inconclusivo'
+                    : 'inconclusivos';
+                  const outcome = r.kind === 'validate'
+                    ? `${
+                      inconclusive.toLocaleString('pt-BR')
+                    } ${inconclusiveLabel}`
+                    : [s.outcome, s.error_category].filter(Boolean).join(' ');
+                  return (
+                    <div className='source-row' key={s.id}>
+                      <span>{source(s.source)}</span>
+                      <span>
+                        {count.toLocaleString('pt-BR')} {listingLabel} ·{' '}
+                        {outcome}
+                      </span>
+                    </div>
+                  );
+                })}
                 {selected === r.id && (
                   <pre>{JSON.stringify(r.search_snapshot,null,2)}</pre>
                 )}

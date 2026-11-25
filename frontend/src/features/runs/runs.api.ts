@@ -5,8 +5,11 @@ import { searches } from '../searches/searches.api';
 export async function getRuns() {
   return ({
     jobs: check(
-      await supabase.from('crawl_jobs').select('*,crawl_source_runs(*)')
+      await supabase.from('crawl_jobs').select(
+        '*,crawl_run_source_summaries(*)',
+      )
         .not('started_at', 'is', null).order('started_at', { ascending: false })
+        .order('id', { referencedTable: 'crawl_run_source_summaries' })
         .limit(90),
     ) ?? [],
     activeJobs: check(

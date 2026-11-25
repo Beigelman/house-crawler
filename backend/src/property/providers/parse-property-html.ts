@@ -20,6 +20,29 @@ function parseWimoveisPrice($: CheerioAPI): number | null {
     parseBRL(titlePrice?.[1] ?? '');
 }
 
+function parseParking($: CheerioAPI, source: string): boolean | null {
+  const article = source === 'wimoveis' ? $('#article-container') : $('body');
+  const content = (article.length ? article : $('body')).clone();
+  content.find('script, style, template, noscript').remove();
+
+  const fromText = (text: string) => {
+    if (/\b(?:sem\s+(?:vagas?|garagem)|0\s+vagas?)\b/i.test(text)) return false;
+    if (/\b(?:[1-9]\d*\s+vagas?|garagem)\b/i.test(text)) return true;
+    return null;
+  };
+
+  if (source === 'wimoveis') {
+    const feature = content.find(
+      '#section-icon-features-property .icon-feature:has(.icon-cochera)',
+    ).first();
+    const summary = content.find('.title-type-sup-property').first();
+    const parking = fromText(feature.text()) ?? fromText(summary.text());
+    if (parking != null) return parking;
+  }
+
+  return fromText(content.text());
+}
+
 export function parsePropertyHtml(
   html: string,
   url: string,
@@ -119,9 +142,6 @@ export function parsePropertyHtml(
       /\belevador(?:es)?\b/i,
       /sem\s+elevador|não\s+(?:possui|tem)\s+elevador/i,
     ),
-    has_parking: amenity(
-      /\b(?:[1-9][0-9]*\s+vagas?|garagem)\b/i,
-      /sem\s+(?:vaga|garagem)|0\s+vagas/i,
-    ),
+    has_parking: parseParking($, source),
   };
 }
